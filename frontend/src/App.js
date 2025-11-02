@@ -1,13 +1,32 @@
 import "./App.css";
-import TestAPI from "./components/TestAPI";
+import Register from "./components/Register";
+import Login from "./components/Login";
+import { useState } from "react";
 
 function App() {
+  const [showRegister, setShowRegister] = useState(true);
+
   return (
     <div className="App">
-      <header className="App-header">
-        <h1>Frontend ↔ Backend Test</h1>
-        <TestAPI />
-      </header>
+      <div className="text-center my-3">
+        <button
+          className={`btn me-2 ${
+            showRegister ? "btn-primary" : "btn-outline-primary"
+          }`}
+          onClick={() => setShowRegister(true)}
+        >
+          Register
+        </button>
+        <button
+          className={`btn ${
+            !showRegister ? "btn-success" : "btn-outline-success"
+          }`}
+          onClick={() => setShowRegister(false)}
+        >
+          Login
+        </button>
+      </div>
+      {showRegister ? <Register /> : <Login />}
     </div>
   );
 }
