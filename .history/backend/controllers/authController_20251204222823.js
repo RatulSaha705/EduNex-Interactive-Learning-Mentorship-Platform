@@ -50,7 +50,6 @@ export const registerUser = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Register error:", error);
     res.status(500).json({ message: "Error registering user", error });
   }
 };
@@ -83,7 +82,6 @@ export const loginUser = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Login error:", error);
     res.status(500).json({ message: "Error logging in", error });
   }
 };

@@ -1,21 +1,12 @@
+// backend/controllers/authController.js
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
-// helper to generate JWT
-const generateToken = (user) => {
-  return jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, {
-    expiresIn: "1d",
-  });
-};
-
 // ✅ Register user
 export const registerUser = async (req, res) => {
   try {
-    let { name, email, password, role } = req.body;
-
-    // normalize email
-    email = email.toLowerCase().trim();
+    const { name, email, password, role } = req.body;
 
     // check if user already exists
     const existingUser = await User.findOne({ email });
@@ -32,16 +23,13 @@ export const registerUser = async (req, res) => {
       name,
       email,
       password: hashedPassword,
-      role: assignedRole,
+      role: assignedRole, // ignore "admin" completely
     });
 
     await newUser.save();
 
-    const token = generateToken(newUser);
-
     res.status(201).json({
       message: "User registered successfully",
-      token,
       user: {
         id: newUser._id,
         name: newUser.name,
@@ -50,7 +38,6 @@ export const registerUser = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Register error:", error);
     res.status(500).json({ message: "Error registering user", error });
   }
 };
@@ -58,10 +45,7 @@ export const registerUser = async (req, res) => {
 // ✅ Login user
 export const loginUser = async (req, res) => {
   try {
-    let { email, password } = req.body;
-
-    // normalize email
-    email = email.toLowerCase().trim();
+    const { email, password } = req.body;
 
     const user = await User.findOne({ email });
     if (!user) return res.status(400).json({ message: "User not found" });
@@ -70,7 +54,15 @@ export const loginUser = async (req, res) => {
     if (!isPasswordValid)
       return res.status(400).json({ message: "Invalid credentials" });
 
-    const token = generateToken(user);
+    // ✅ include role in JWT
+    const token = jwt.sign(
+      {
+        id: user._id,
+        role: user.role,
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: "1d" }
+    );
 
     res.json({
       message: "Login successful",
@@ -83,7 +75,6 @@ export const loginUser = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Login error:", error);
     res.status(500).json({ message: "Error logging in", error });
   }
 };

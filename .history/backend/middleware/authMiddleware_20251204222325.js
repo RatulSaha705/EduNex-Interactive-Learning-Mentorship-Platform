@@ -1,8 +1,8 @@
+// backend/middleware/authMiddleware.js
 import jwt from "jsonwebtoken";
-import User from "../models/User.js";
 
-// ✅ Protect routes: verify JWT token and attach full user
-export const protect = async (req, res, next) => {
+// ✅ Protect routes: verify JWT token
+export const protect = (req, res, next) => {
   let token;
 
   if (
@@ -12,20 +12,13 @@ export const protect = async (req, res, next) => {
     try {
       token = req.headers.authorization.split(" ")[1];
 
+      // decode token (contains id and role)
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-      const user = await User.findById(decoded.id).select("-password");
-      if (!user) {
-        return res
-          .status(401)
-          .json({ message: "User not found for this token" });
-      }
-
-      req.user = user; // attach full user
+      req.user = decoded; // attach user info to request
       next();
     } catch (error) {
-      console.error("Auth error:", error.message);
-      return res.status(401).json({ message: "Not authorized, token failed" });
+      return res.status(401).json({ message: "Not authorized, invalid token" });
     }
   } else {
     return res.status(401).json({ message: "Not authorized, no token" });
@@ -35,6 +28,7 @@ export const protect = async (req, res, next) => {
 // ✅ Role-based access control
 export const authorizeRoles = (...roles) => {
   return (req, res, next) => {
+    // check if user exists and role is allowed
     if (!req.user || !roles.includes(req.user.role)) {
       return res
         .status(403)

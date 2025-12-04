@@ -12,8 +12,10 @@ export const protect = async (req, res, next) => {
     try {
       token = req.headers.authorization.split(" ")[1];
 
+      // decode token
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
+      // fetch full user from DB (exclude password)
       const user = await User.findById(decoded.id).select("-password");
       if (!user) {
         return res
@@ -21,7 +23,7 @@ export const protect = async (req, res, next) => {
           .json({ message: "User not found for this token" });
       }
 
-      req.user = user; // attach full user
+      req.user = user; // attach full user object to request
       next();
     } catch (error) {
       console.error("Auth error:", error.message);
