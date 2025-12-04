@@ -3,7 +3,9 @@ import express from "express";
 import dotenv from "dotenv";
 import connectDB from "./config/db.js";
 import cors from "cors";
-import authRoutes from "./routes/authRoutes.js"; // Step 3: Import auth routes
+
+import authRoutes from "./routes/authRoutes.js";
+import courseRoutes from "./routes/courseRoutes.js";
 
 dotenv.config();
 connectDB();
@@ -14,7 +16,8 @@ app.use(cors());
 app.use(express.json());
 
 // Routes
-app.use("/api/auth", authRoutes); // All auth routes prefixed with /api/auth
+app.use("/api/auth", authRoutes);
+app.use("/api/courses", courseRoutes);
 
 // Test route
 app.get("/", (req, res) => {

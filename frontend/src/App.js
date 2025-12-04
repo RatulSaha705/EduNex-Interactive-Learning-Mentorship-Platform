@@ -8,16 +8,22 @@ import {
   Navigate,
   useNavigate,
 } from "react-router-dom";
+import { useContext } from "react";
+import "bootstrap/dist/css/bootstrap.min.css";
+
 import Register from "./components/Register";
 import Login from "./components/Login";
 import Profile from "./components/Profile"; // Edit Profile
 import ViewProfile from "./components/ViewProfile"; // View Profile
 import StudentPage from "./components/StudentPage";
-import InstructorPage from "./components/InstructorPage";
+import InstructorPage from "./components/InstructorPage"; // Dashboard with courses + create button
 import AdminPage from "./components/AdminPage";
-import { useContext } from "react";
+import CreateCourse from "./components/CreateCourse"; // Instructor: create course
 import { AuthContext } from "./context/AuthContext";
-import "bootstrap/dist/css/bootstrap.min.css";
+import StudentCourses from "./pages/StudentCourses";
+import CourseDetails from "./pages/CourseDetails";
+import MyCourses from "./pages/MyCourses";
+import EditCourse from "./pages/EditCourse";
 
 function App() {
   const { auth, logout } = useContext(AuthContext);
@@ -66,9 +72,32 @@ function App() {
           }
         />
         <Route
+          path="/instructor/create-course"
+          element={
+            auth.user?.role === "instructor" ? (
+              <CreateCourse />
+            ) : (
+              <Navigate to="/" />
+            )
+          }
+        />
+        <Route
           path="/admin"
           element={
             auth.user?.role === "admin" ? <AdminPage /> : <Navigate to="/" />
+          }
+        />
+        <Route path="/student/courses" element={<StudentCourses />} />
+        <Route path="/student/courses/:id" element={<CourseDetails />} />
+        <Route path="/student/my-courses" element={<MyCourses />} />
+        <Route
+          path="/instructor/course/:id/edit"
+          element={
+            auth.user?.role === "instructor" ? (
+              <EditCourse />
+            ) : (
+              <Navigate to="/" />
+            )
           }
         />
       </Routes>
@@ -76,13 +105,13 @@ function App() {
   );
 }
 
-// Separate navigation component
+// Navigation component
 function Navigation({ auth, logout }) {
   const navigate = useNavigate();
 
   const handleLogout = () => {
     logout(); // Clear auth state
-    navigate("/"); // Programmatic redirect to login
+    navigate("/"); // Redirect to login page
   };
 
   return (
@@ -111,17 +140,17 @@ function Navigation({ auth, logout }) {
           {/* Role-based Links */}
           {auth.user.role === "student" && (
             <Link to="/student" className="btn btn-warning me-2">
-              Student Page
+              Student Dashboard
             </Link>
           )}
           {auth.user.role === "instructor" && (
             <Link to="/instructor" className="btn btn-warning me-2">
-              Instructor Page
+              Instructor Dashboard
             </Link>
           )}
           {auth.user.role === "admin" && (
             <Link to="/admin" className="btn btn-danger me-2">
-              Admin Page
+              Admin Dashboard
             </Link>
           )}
 

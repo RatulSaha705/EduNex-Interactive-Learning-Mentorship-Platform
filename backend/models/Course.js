@@ -1,0 +1,37 @@
+import mongoose from "mongoose";
+
+const lessonSchema = new mongoose.Schema(
+  {
+    title: { type: String, required: true },
+    contentType: {
+      type: String,
+      enum: ["video", "pdf", "doc"],
+      default: "video",
+    },
+    url: { type: String },
+  },
+  { timestamps: true }
+);
+
+const courseSchema = new mongoose.Schema(
+  {
+    title: { type: String, required: true },
+    description: { type: String, default: "" },
+    category: { type: String, default: "" },
+    instructor: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    lessons: [lessonSchema],
+    enrolledStudents: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
+  },
+  { timestamps: true }
+);
+
+export default mongoose.model("Course", courseSchema);
