@@ -38,7 +38,7 @@ export default function CourseDiscussion() {
             },
           }
         );
-        setCourse(res.data);
+        setCourse(res.data.course);
       } catch (err) {
         console.error(err);
         setError(
@@ -158,7 +158,7 @@ export default function CourseDiscussion() {
       {error && <div className="alert alert-danger">{error}</div>}
 
       {/* Ask Question Form (students only AND enrolled) */}
-      {auth.user.role === "student" && isEnrolled && (
+        {auth.user.role === "student" && isEnrolled && (
         <div className="card mb-4">
           <div className="card-body">
             <h5 className="card-title">Ask a Question</h5>
