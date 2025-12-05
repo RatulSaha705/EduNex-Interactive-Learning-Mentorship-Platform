@@ -1,5 +1,4 @@
 import Course from "../models/Course.js";
-import User from "../models/User.js";
 
 // ----------------- INSTRUCTOR ----------------- //
 
@@ -28,29 +27,10 @@ export const createCourse = async (req, res) => {
   }
 };
 
-// Get all courses with optional filters
+// Get all courses
 export const getCourses = async (req, res) => {
   try {
-    const { category, instructor } = req.query;
-    let filter = {};
-
-    if (category) {
-      filter.category = { $regex: category, $options: "i" }; // case-insensitive match
-    }
-
-    if (instructor) {
-      // Find instructors whose name matches
-      const instructors = await User.find({
-        name: { $regex: instructor, $options: "i" },
-      }).select("_id");
-
-      filter.instructor = { $in: instructors.map((u) => u._id) };
-    }
-
-    const courses = await Course.find(filter).populate(
-      "instructor",
-      "name email"
-    );
+    const courses = await Course.find().populate("instructor", "name email");
     res.json({ courses });
   } catch (error) {
     res.status(500).json({ message: error.message });

@@ -25,7 +25,6 @@ import MyCourses from "./pages/MyCourses";
 import EditCourse from "./pages/EditCourse";
 import AddLesson from "./pages/AddLesson";
 import CourseList from "./pages/CourseList";
-import InstructorCourseDetails from "./pages/InstructorCourseDetails";
 
 function App() {
   const { auth, logout } = useContext(AuthContext);
@@ -116,15 +115,6 @@ function App() {
 
         {/* Keep fallback route if needed */}
         <Route path="*" element={<Navigate to="/" />} />
-        <Route
-          path="/instructor/courses/:id"
-          element={<InstructorCourseDetails />}
-        />
-
-        <Route
-          path="/instructor/courses/:id/add-lesson"
-          element={<AddLesson />}
-        />
       </Routes>
     </BrowserRouter>
   );

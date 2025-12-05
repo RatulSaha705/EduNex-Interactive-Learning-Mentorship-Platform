@@ -49,6 +49,7 @@ export default function CourseDetails() {
     if (auth?.token) fetchCourse();
   }, [id, auth?.token]);
 
+  // Load YouTube API
   useEffect(() => {
     if (!window.YT) {
       const tag = document.createElement("script");
@@ -73,56 +74,30 @@ export default function CourseDetails() {
 
   const handleCompleteLesson = async (lessonId) => {
     try {
-      // Skip if already completed
-      const studentProgress = course.completedLessons?.find(
-        (cl) => cl.student.toString() === auth.user.id
-      );
-      if (studentProgress?.lessons.includes(lessonId)) return;
-
       const res = await axios.post(
         `http://localhost:5000/api/courses/${id}/lessons/${lessonId}/complete`,
         {},
         { headers: { Authorization: `Bearer ${auth.token}` } }
       );
 
-      setCourse((prevCourse) => {
-        const updatedCompletedLessons = [...prevCourse.completedLessons];
-        const existingStudent = updatedCompletedLessons.find(
-          (cl) => cl.student.toString() === auth.user.id
-        );
+      setCourse((prevCourse) => ({
+        ...prevCourse,
+        completedLessons: res.data.completedLessons,
+      }));
 
-        if (existingStudent) {
-          // merge new lesson into existing lessons array
-          existingStudent.lessons = [
-            ...new Set([...existingStudent.lessons, lessonId]),
-          ];
-        } else {
-          updatedCompletedLessons.push({
-            student: auth.user.id,
-            lessons: [lessonId],
-          });
-        }
-
-        // Calculate progress immediately based on updated lessons
-        const currentStudent = updatedCompletedLessons.find(
-          (cl) => cl.student.toString() === auth.user.id
-        );
-        const newProgress = currentStudent
-          ? Math.floor(
-              (currentStudent.lessons.length / prevCourse.lessons.length) * 100
-            )
-          : 0;
-        setProgress(newProgress);
-
-        return {
-          ...prevCourse,
-          completedLessons: updatedCompletedLessons,
-        };
-      });
-    } catch (err) {
-      console.log(
-        err.response?.data?.message || "Failed to mark lesson complete"
+      const studentProgress = res.data.completedLessons.find(
+        (cl) => cl.student.toString() === auth.user.id
       );
+
+      if (studentProgress) {
+        setProgress(
+          Math.floor(
+            (studentProgress.lessons.length / course.lessons.length) * 100
+          )
+        );
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to mark lesson complete");
     }
   };
 
@@ -147,11 +122,6 @@ export default function CourseDetails() {
   const renderLessonContent = () => {
     if (!selectedLesson) return null;
 
-    const completed =
-      course.completedLessons
-        ?.find((cl) => cl.student.toString() === auth.user.id)
-        ?.lessons.includes(selectedLesson._id) || false;
-
     switch (selectedLesson.contentType) {
       case "video":
         const embedUrl =
@@ -160,6 +130,7 @@ export default function CourseDetails() {
             ? getYouTubeEmbedUrl(selectedLesson.url)
             : selectedLesson.url;
 
+        // Force React to remount iframe by using key
         if (embedUrl.includes("youtube.com/embed")) {
           return (
             <iframe
@@ -172,7 +143,7 @@ export default function CourseDetails() {
               frameBorder="0"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
-              onLoad={() => handleCompleteLesson(selectedLesson._id)}
+              onLoad={() => handleCompleteLesson(selectedLesson._id)} // mark progress on open
             />
           );
         }
@@ -184,6 +155,7 @@ export default function CourseDetails() {
             height="400"
             controls
             onEnded={() => handleCompleteLesson(selectedLesson._id)}
+            onPlay={() => handleCompleteLesson(selectedLesson._id)} // mark progress when video starts
           >
             <source src={selectedLesson.url} type="video/mp4" />
             Your browser does not support the video tag.
@@ -199,7 +171,7 @@ export default function CourseDetails() {
             src={selectedLesson.url}
             title={selectedLesson.title}
             frameBorder="0"
-            onLoad={() => handleCompleteLesson(selectedLesson._id)}
+            onLoad={() => handleCompleteLesson(selectedLesson._id)} // mark progress when opened
           />
         );
 
@@ -211,7 +183,7 @@ export default function CourseDetails() {
             target="_blank"
             rel="noopener noreferrer"
             className="btn btn-primary"
-            onClick={() => handleCompleteLesson(selectedLesson._id)}
+            onClick={() => handleCompleteLesson(selectedLesson._id)} // mark progress when clicked
           >
             Open Document
           </a>

@@ -73,21 +73,6 @@ export default function InstructorPage() {
     }
   };
 
-  const handleDeleteCourse = async (courseId) => {
-    if (!window.confirm("Are you sure you want to delete this course?")) return;
-
-    try {
-      await axios.delete(`http://localhost:5000/api/courses/${courseId}`, {
-        headers: { Authorization: `Bearer ${auth.token}` },
-      });
-      setCourses((prev) => prev.filter((c) => c._id !== courseId));
-      setMessage("Course deleted successfully");
-      setTimeout(() => setMessage(""), 4000);
-    } catch (err) {
-      setError("Failed to delete course");
-    }
-  };
-
   return (
     <div className="container mt-4">
       <h3>Instructor Dashboard</h3>
@@ -156,12 +141,12 @@ export default function InstructorPage() {
                 Manage Lessons
               </Link>
 
-              <button
-                className="btn btn-sm btn-danger"
-                onClick={() => handleDeleteCourse(course._id)}
+              <Link
+                to={`/instructor/courses/${course._id}/add-lesson`}
+                className="btn btn-sm btn-secondary"
               >
-                Delete Course
-              </button>
+                Add Lesson
+              </Link>
             </div>
           </li>
         ))}

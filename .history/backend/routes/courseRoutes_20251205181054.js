@@ -9,7 +9,6 @@ import {
   updateCourse,
   addLessonToCourse,
   deleteLesson,
-  completeLesson, // ✅ add this
 } from "../controllers/courseController.js";
 
 const router = express.Router();
@@ -45,14 +44,6 @@ router.get("/my-courses", protect, authorizeRoles("student"), getMyCourses);
 
 // Enroll
 router.post("/:id/enroll", protect, authorizeRoles("student"), enrollInCourse);
-
-// ✅ Mark lesson as completed
-router.post(
-  "/:courseId/lessons/:lessonId/complete",
-  protect,
-  authorizeRoles("student"),
-  completeLesson
-);
 
 // ----------------- COMMON ----------------- //
 

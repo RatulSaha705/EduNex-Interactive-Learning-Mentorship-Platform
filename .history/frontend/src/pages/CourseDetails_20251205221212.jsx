@@ -85,40 +85,22 @@ export default function CourseDetails() {
         { headers: { Authorization: `Bearer ${auth.token}` } }
       );
 
-      setCourse((prevCourse) => {
-        const updatedCompletedLessons = [...prevCourse.completedLessons];
-        const existingStudent = updatedCompletedLessons.find(
-          (cl) => cl.student.toString() === auth.user.id
+      setCourse((prevCourse) => ({
+        ...prevCourse,
+        completedLessons: res.data.completedLessons,
+      }));
+
+      const updatedProgress = res.data.completedLessons.find(
+        (cl) => cl.student.toString() === auth.user.id
+      );
+
+      if (updatedProgress) {
+        setProgress(
+          Math.floor(
+            (updatedProgress.lessons.length / course.lessons.length) * 100
+          )
         );
-
-        if (existingStudent) {
-          // merge new lesson into existing lessons array
-          existingStudent.lessons = [
-            ...new Set([...existingStudent.lessons, lessonId]),
-          ];
-        } else {
-          updatedCompletedLessons.push({
-            student: auth.user.id,
-            lessons: [lessonId],
-          });
-        }
-
-        // Calculate progress immediately based on updated lessons
-        const currentStudent = updatedCompletedLessons.find(
-          (cl) => cl.student.toString() === auth.user.id
-        );
-        const newProgress = currentStudent
-          ? Math.floor(
-              (currentStudent.lessons.length / prevCourse.lessons.length) * 100
-            )
-          : 0;
-        setProgress(newProgress);
-
-        return {
-          ...prevCourse,
-          completedLessons: updatedCompletedLessons,
-        };
-      });
+      }
     } catch (err) {
       console.log(
         err.response?.data?.message || "Failed to mark lesson complete"

@@ -30,12 +30,6 @@ const courseSchema = new mongoose.Schema(
         ref: "User",
       },
     ],
-    completedLessons: [
-      {
-        student: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-        lessons: [{ type: mongoose.Schema.Types.ObjectId }],
-      },
-    ],
   },
   { timestamps: true }
 );

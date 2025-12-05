@@ -97,28 +97,30 @@ export default function CourseDetails() {
             ...new Set([...existingStudent.lessons, lessonId]),
           ];
         } else {
+          // add a new record for this student if it doesn't exist
           updatedCompletedLessons.push({
             student: auth.user.id,
             lessons: [lessonId],
           });
         }
 
-        // Calculate progress immediately based on updated lessons
-        const currentStudent = updatedCompletedLessons.find(
-          (cl) => cl.student.toString() === auth.user.id
-        );
-        const newProgress = currentStudent
-          ? Math.floor(
-              (currentStudent.lessons.length / prevCourse.lessons.length) * 100
-            )
-          : 0;
-        setProgress(newProgress);
-
         return {
           ...prevCourse,
           completedLessons: updatedCompletedLessons,
         };
       });
+
+      // Update progress bar
+      const updatedProgress = res.data.completedLessons.find(
+        (cl) => cl.student.toString() === auth.user.id
+      );
+      if (updatedProgress) {
+        setProgress(
+          Math.floor(
+            (updatedProgress.lessons.length / course.lessons.length) * 100
+          )
+        );
+      }
     } catch (err) {
       console.log(
         err.response?.data?.message || "Failed to mark lesson complete"

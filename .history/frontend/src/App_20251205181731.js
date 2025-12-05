@@ -20,12 +20,11 @@ import InstructorPage from "./components/InstructorPage"; // Dashboard with cour
 import AdminPage from "./components/AdminPage";
 import CreateCourse from "./components/CreateCourse"; // Instructor: create course
 import { AuthContext } from "./context/AuthContext";
+import StudentCourses from "./pages/StudentCourses";
 import CourseDetails from "./pages/CourseDetails";
 import MyCourses from "./pages/MyCourses";
 import EditCourse from "./pages/EditCourse";
 import AddLesson from "./pages/AddLesson";
-import CourseList from "./pages/CourseList";
-import InstructorCourseDetails from "./pages/InstructorCourseDetails";
 
 function App() {
   const { auth, logout } = useContext(AuthContext);
@@ -63,18 +62,6 @@ function App() {
             )
           }
         />
-
-        {/* Updated route: student courses now shows CourseList */}
-        <Route
-          path="/student/courses"
-          element={
-            auth.user?.role === "student" ? <CourseList /> : <Navigate to="/" />
-          }
-        />
-
-        <Route path="/student/courses/:id" element={<CourseDetails />} />
-        <Route path="/student/my-courses" element={<MyCourses />} />
-
         <Route
           path="/instructor"
           element={
@@ -101,6 +88,9 @@ function App() {
             auth.user?.role === "admin" ? <AdminPage /> : <Navigate to="/" />
           }
         />
+        <Route path="/student/courses" element={<StudentCourses />} />
+        <Route path="/student/courses/:id" element={<CourseDetails />} />
+        <Route path="/student/my-courses" element={<MyCourses />} />
         <Route
           path="/instructor/course/:id/edit"
           element={
@@ -112,19 +102,6 @@ function App() {
           }
         />
         <Route path="/courses/:courseId/add-lesson" element={<AddLesson />} />
-        <Route path="/courses" element={<CourseList />} />
-
-        {/* Keep fallback route if needed */}
-        <Route path="*" element={<Navigate to="/" />} />
-        <Route
-          path="/instructor/courses/:id"
-          element={<InstructorCourseDetails />}
-        />
-
-        <Route
-          path="/instructor/courses/:id/add-lesson"
-          element={<AddLesson />}
-        />
       </Routes>
     </BrowserRouter>
   );

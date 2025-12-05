@@ -16,6 +16,7 @@ export default function InstructorPage() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
+  // Show success message if navigated from EditCourse
   useEffect(() => {
     if (location.state?.successMsg) {
       setMessage(location.state.successMsg);
@@ -32,6 +33,7 @@ export default function InstructorPage() {
         headers: { Authorization: `Bearer ${auth.token}` },
       });
 
+      // only instructor's courses
       const myCourses = res.data.courses.filter(
         (c) => c.instructor._id === auth.user.id
       );
@@ -45,6 +47,7 @@ export default function InstructorPage() {
     if (auth.user) fetchCourses();
   }, [auth.user]);
 
+  // Create new course
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage("");
@@ -70,21 +73,6 @@ export default function InstructorPage() {
       fetchCourses();
     } catch (err) {
       setError(err.response?.data?.message || "Error creating course");
-    }
-  };
-
-  const handleDeleteCourse = async (courseId) => {
-    if (!window.confirm("Are you sure you want to delete this course?")) return;
-
-    try {
-      await axios.delete(`http://localhost:5000/api/courses/${courseId}`, {
-        headers: { Authorization: `Bearer ${auth.token}` },
-      });
-      setCourses((prev) => prev.filter((c) => c._id !== courseId));
-      setMessage("Course deleted successfully");
-      setTimeout(() => setMessage(""), 4000);
-    } catch (err) {
-      setError("Failed to delete course");
     }
   };
 
@@ -138,6 +126,7 @@ export default function InstructorPage() {
             <br />
             {course.description && <small>{course.description}</small>}
             <br />
+            {/* ✅ Lesson info */}
             <small className="text-muted">
               Lessons: {course.lessons?.length || 0}
             </small>
@@ -149,19 +138,13 @@ export default function InstructorPage() {
                 Edit
               </Link>
 
+              {/* ✅ Add Lesson Button */}
               <Link
-                to={`/instructor/courses/${course._id}`}
-                className="btn btn-sm btn-primary me-2"
+                to={`/courses/${course._id}/add-lesson`}
+                className="btn btn-sm btn-secondary"
               >
-                Manage Lessons
+                Add Lessons
               </Link>
-
-              <button
-                className="btn btn-sm btn-danger"
-                onClick={() => handleDeleteCourse(course._id)}
-              >
-                Delete Course
-              </button>
             </div>
           </li>
         ))}

@@ -16,11 +16,13 @@ export default function InstructorPage() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
+  // Show success message if navigated from EditCourse
   useEffect(() => {
     if (location.state?.successMsg) {
       setMessage(location.state.successMsg);
-      window.history.replaceState({}, document.title);
+      window.history.replaceState({}, document.title); // Clear state
 
+      // Auto-hide message after 4 seconds
       const timer = setTimeout(() => setMessage(""), 4000);
       return () => clearTimeout(timer);
     }
@@ -32,6 +34,7 @@ export default function InstructorPage() {
         headers: { Authorization: `Bearer ${auth.token}` },
       });
 
+      // Filter only instructor's courses
       const myCourses = res.data.courses.filter(
         (c) => c.instructor._id === auth.user.id
       );
@@ -45,6 +48,7 @@ export default function InstructorPage() {
     if (auth.user) fetchCourses();
   }, [auth.user]);
 
+  // Create new course
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage("");
@@ -64,27 +68,14 @@ export default function InstructorPage() {
       });
 
       setMessage(res.data.message);
+
+      // Auto-hide new course success message as well
       setTimeout(() => setMessage(""), 4000);
 
       setForm({ title: "", description: "", category: "" });
       fetchCourses();
     } catch (err) {
       setError(err.response?.data?.message || "Error creating course");
-    }
-  };
-
-  const handleDeleteCourse = async (courseId) => {
-    if (!window.confirm("Are you sure you want to delete this course?")) return;
-
-    try {
-      await axios.delete(`http://localhost:5000/api/courses/${courseId}`, {
-        headers: { Authorization: `Bearer ${auth.token}` },
-      });
-      setCourses((prev) => prev.filter((c) => c._id !== courseId));
-      setMessage("Course deleted successfully");
-      setTimeout(() => setMessage(""), 4000);
-    } catch (err) {
-      setError("Failed to delete course");
     }
   };
 
@@ -95,7 +86,6 @@ export default function InstructorPage() {
       {/* Create Course */}
       <div className="card p-3 mb-4">
         <h5>Create New Course</h5>
-
         <form onSubmit={handleSubmit}>
           <input
             type="text"
@@ -119,7 +109,6 @@ export default function InstructorPage() {
             value={form.category}
             onChange={(e) => setForm({ ...form, category: e.target.value })}
           />
-
           <button className="btn btn-primary">Create Course</button>
         </form>
 
@@ -138,31 +127,12 @@ export default function InstructorPage() {
             <br />
             {course.description && <small>{course.description}</small>}
             <br />
-            <small className="text-muted">
-              Lessons: {course.lessons?.length || 0}
-            </small>
-            <div className="mt-2">
-              <Link
-                to={`/instructor/course/${course._id}/edit`}
-                className="btn btn-sm btn-warning me-2"
-              >
-                Edit
-              </Link>
-
-              <Link
-                to={`/instructor/courses/${course._id}`}
-                className="btn btn-sm btn-primary me-2"
-              >
-                Manage Lessons
-              </Link>
-
-              <button
-                className="btn btn-sm btn-danger"
-                onClick={() => handleDeleteCourse(course._id)}
-              >
-                Delete Course
-              </button>
-            </div>
+            <Link
+              to={`/instructor/course/${course._id}/edit`}
+              className="btn btn-sm btn-warning mt-2"
+            >
+              Edit
+            </Link>
           </li>
         ))}
       </ul>

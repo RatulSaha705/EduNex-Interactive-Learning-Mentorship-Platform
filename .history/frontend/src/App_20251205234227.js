@@ -25,7 +25,6 @@ import MyCourses from "./pages/MyCourses";
 import EditCourse from "./pages/EditCourse";
 import AddLesson from "./pages/AddLesson";
 import CourseList from "./pages/CourseList";
-import InstructorCourseDetails from "./pages/InstructorCourseDetails";
 
 function App() {
   const { auth, logout } = useContext(AuthContext);

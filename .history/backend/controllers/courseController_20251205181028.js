@@ -1,5 +1,4 @@
 import Course from "../models/Course.js";
-import User from "../models/User.js";
 
 // ----------------- INSTRUCTOR ----------------- //
 
@@ -28,29 +27,10 @@ export const createCourse = async (req, res) => {
   }
 };
 
-// Get all courses with optional filters
+// Get all courses
 export const getCourses = async (req, res) => {
   try {
-    const { category, instructor } = req.query;
-    let filter = {};
-
-    if (category) {
-      filter.category = { $regex: category, $options: "i" }; // case-insensitive match
-    }
-
-    if (instructor) {
-      // Find instructors whose name matches
-      const instructors = await User.find({
-        name: { $regex: instructor, $options: "i" },
-      }).select("_id");
-
-      filter.instructor = { $in: instructors.map((u) => u._id) };
-    }
-
-    const courses = await Course.find(filter).populate(
-      "instructor",
-      "name email"
-    );
+    const courses = await Course.find().populate("instructor", "name email");
     res.json({ courses });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -173,43 +153,6 @@ export const getMyCourses = async (req, res) => {
 
     res.json({ courses });
   } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// Mark lesson as completed
-export const completeLesson = async (req, res) => {
-  try {
-    const { courseId, lessonId } = req.params;
-    const studentId = req.user.id;
-
-    const course = await Course.findById(courseId);
-    if (!course) return res.status(404).json({ message: "Course not found" });
-
-    // Find existing student progress
-    let studentProgress = course.completedLessons.find(
-      (cl) => cl.student.toString() === studentId
-    );
-
-    if (!studentProgress) {
-      studentProgress = { student: studentId, lessons: [] };
-      course.completedLessons.push(studentProgress);
-    }
-
-    // Add lesson if not already completed
-    if (!studentProgress.lessons.includes(lessonId)) {
-      studentProgress.lessons.push(lessonId);
-      await course.save();
-    }
-
-    // Calculate progress %
-    const progress = Math.floor(
-      (studentProgress.lessons.length / course.lessons.length) * 100
-    );
-
-    res.json({ message: "Lesson marked as completed", progress });
-  } catch (error) {
-    console.error(error);
     res.status(500).json({ message: error.message });
   }
 };
