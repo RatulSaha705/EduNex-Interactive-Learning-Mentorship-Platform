@@ -13,6 +13,16 @@ export default function CourseDetails() {
   const [enrollMsg, setEnrollMsg] = useState("");
   const [selectedLesson, setSelectedLesson] = useState(null);
 
+  // Function to calculate progress dynamically
+  const calculateProgress = (completedLessons = [], totalLessons = 0) => {
+    if (!totalLessons) return 0;
+    const studentCompleted = completedLessons.find(
+      (cl) => cl.student.toString() === auth.user?.id
+    );
+    const completedCount = studentCompleted?.lessons.length || 0;
+    return Math.min(Math.floor((completedCount / totalLessons) * 100), 100);
+  };
+
   // Fetch course details
   useEffect(() => {
     const fetchCourse = async () => {
@@ -83,7 +93,10 @@ export default function CourseDetails() {
           });
         }
 
-        return { ...prevCourse, completedLessons: updatedCompletedLessons };
+        return {
+          ...prevCourse,
+          completedLessons: updatedCompletedLessons,
+        };
       });
     } catch (err) {
       console.log(
@@ -198,19 +211,11 @@ export default function CourseDetails() {
       (studentId) => studentId.toString() === auth.user.id
     );
 
-  // Calculate progress dynamically
-  let progress = 0;
-  if (alreadyEnrolled) {
-    const totalLessons = course.lessons?.length || 1;
-    const studentCompleted = course.completedLessons?.find(
-      (cl) => cl.student.toString() === auth.user?.id
-    );
-    const completedCount =
-      studentCompleted?.lessons.filter((lessonId) =>
-        course.lessons.some((l) => l._id === lessonId)
-      ).length || 0;
-    progress = Math.floor((completedCount / totalLessons) * 100);
-  }
+  // Dynamically calculate progress
+  const progress = calculateProgress(
+    course.completedLessons,
+    course.lessons?.length || 0
+  );
 
   return (
     <div className="container mt-4">
