@@ -83,7 +83,10 @@ export default function CourseDetails() {
           });
         }
 
-        return { ...prevCourse, completedLessons: updatedCompletedLessons };
+        return {
+          ...prevCourse,
+          completedLessons: updatedCompletedLessons,
+        };
       });
     } catch (err) {
       console.log(
@@ -198,19 +201,14 @@ export default function CourseDetails() {
       (studentId) => studentId.toString() === auth.user.id
     );
 
-  // Calculate progress dynamically
-  let progress = 0;
-  if (alreadyEnrolled) {
-    const totalLessons = course.lessons?.length || 1;
-    const studentCompleted = course.completedLessons?.find(
-      (cl) => cl.student.toString() === auth.user?.id
-    );
-    const completedCount =
-      studentCompleted?.lessons.filter((lessonId) =>
-        course.lessons.some((l) => l._id === lessonId)
-      ).length || 0;
-    progress = Math.floor((completedCount / totalLessons) * 100);
-  }
+  // Calculate progress dynamically every render
+  const totalLessons = course.lessons?.length || 1;
+  const studentCompleted = course.completedLessons?.find(
+    (cl) => cl.student.toString() === auth.user?.id
+  );
+  const progress = Math.floor(
+    ((studentCompleted?.lessons.length || 0) / totalLessons) * 100
+  );
 
   return (
     <div className="container mt-4">

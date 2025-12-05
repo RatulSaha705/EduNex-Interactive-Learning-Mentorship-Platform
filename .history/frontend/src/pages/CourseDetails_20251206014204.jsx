@@ -12,6 +12,7 @@ export default function CourseDetails() {
   const [error, setError] = useState("");
   const [enrollMsg, setEnrollMsg] = useState("");
   const [selectedLesson, setSelectedLesson] = useState(null);
+  const [progress, setProgress] = useState(0);
 
   // Fetch course details
   useEffect(() => {
@@ -21,6 +22,22 @@ export default function CourseDetails() {
           headers: { Authorization: `Bearer ${auth?.token}` },
         });
         setCourse(res.data.course);
+
+        if (auth?.user) {
+          const studentProgress = res.data.course.completedLessons?.find(
+            (cl) =>
+              cl.student === auth.user.id ||
+              cl.student === auth.user.id.toString()
+          );
+          if (studentProgress) {
+            const totalLessons = res.data.course.lessons.length || 1; // avoid division by zero
+            const completedCount = studentProgress.lessons.length;
+            const initialProgress = Math.floor(
+              (completedCount / totalLessons) * 100
+            );
+            setProgress(initialProgress > 100 ? 100 : initialProgress); // cap only if >100
+          }
+        }
       } catch (err) {
         setError("Failed to load course details");
       } finally {
@@ -55,12 +72,13 @@ export default function CourseDetails() {
 
   const handleCompleteLesson = async (lessonId) => {
     try {
+      // Skip if already completed
       const studentProgress = course.completedLessons?.find(
         (cl) => cl.student.toString() === auth.user.id
       );
       if (studentProgress?.lessons.includes(lessonId)) return;
 
-      await axios.post(
+      const res = await axios.post(
         `http://localhost:5000/api/courses/${id}/lessons/${lessonId}/complete`,
         {},
         { headers: { Authorization: `Bearer ${auth.token}` } }
@@ -73,6 +91,7 @@ export default function CourseDetails() {
         );
 
         if (existingStudent) {
+          // merge new lesson into existing lessons array
           existingStudent.lessons = [
             ...new Set([...existingStudent.lessons, lessonId]),
           ];
@@ -83,7 +102,21 @@ export default function CourseDetails() {
           });
         }
 
-        return { ...prevCourse, completedLessons: updatedCompletedLessons };
+        // Calculate progress immediately based on updated lessons
+        const currentStudent = updatedCompletedLessons.find(
+          (cl) => cl.student.toString() === auth.user.id
+        );
+        const newProgress = currentStudent
+          ? Math.floor(
+              (currentStudent.lessons.length / prevCourse.lessons.length) * 100
+            )
+          : 0;
+        setProgress(newProgress);
+
+        return {
+          ...prevCourse,
+          completedLessons: updatedCompletedLessons,
+        };
       });
     } catch (err) {
       console.log(
@@ -197,20 +230,6 @@ export default function CourseDetails() {
     course.enrolledStudents?.some(
       (studentId) => studentId.toString() === auth.user.id
     );
-
-  // Calculate progress dynamically
-  let progress = 0;
-  if (alreadyEnrolled) {
-    const totalLessons = course.lessons?.length || 1;
-    const studentCompleted = course.completedLessons?.find(
-      (cl) => cl.student.toString() === auth.user?.id
-    );
-    const completedCount =
-      studentCompleted?.lessons.filter((lessonId) =>
-        course.lessons.some((l) => l._id === lessonId)
-      ).length || 0;
-    progress = Math.floor((completedCount / totalLessons) * 100);
-  }
 
   return (
     <div className="container mt-4">
