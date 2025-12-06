@@ -1,5 +1,5 @@
 import { useEffect, useState, useContext } from "react";
-import { useParams,Link } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import axios from "axios";
 import { AuthContext } from "../context/AuthContext";
 
@@ -12,8 +12,8 @@ export default function CourseDetails() {
   const [error, setError] = useState("");
   const [enrollMsg, setEnrollMsg] = useState("");
   const [selectedLesson, setSelectedLesson] = useState(null);
+  const [progress, setProgress] = useState(0);
 
-  // Fetch course details
   useEffect(() => {
     const fetchCourse = async () => {
       try {
@@ -21,6 +21,24 @@ export default function CourseDetails() {
           headers: { Authorization: `Bearer ${auth?.token}` },
         });
         setCourse(res.data.course);
+
+        // Calculate initial progress if already enrolled
+        if (auth?.user) {
+          const studentProgress = res.data.course.completedLessons?.find(
+            (cl) =>
+              cl.student === auth.user.id ||
+              cl.student === auth.user.id.toString()
+          );
+          if (studentProgress) {
+            setProgress(
+              Math.floor(
+                (studentProgress.lessons.length /
+                  res.data.course.lessons.length) *
+                  100
+              )
+            );
+          }
+        }
       } catch (err) {
         setError("Failed to load course details");
       } finally {
@@ -30,14 +48,6 @@ export default function CourseDetails() {
 
     if (auth?.token) fetchCourse();
   }, [id, auth?.token]);
-
-  useEffect(() => {
-    if (!window.YT) {
-      const tag = document.createElement("script");
-      tag.src = "https://www.youtube.com/iframe_api";
-      document.body.appendChild(tag);
-    }
-  }, []);
 
   const handleEnroll = async () => {
     try {
@@ -55,42 +65,42 @@ export default function CourseDetails() {
 
   const handleCompleteLesson = async (lessonId) => {
     try {
-      const studentProgress = course.completedLessons?.find(
-        (cl) => cl.student.toString() === auth.user.id
-      );
-      if (studentProgress?.lessons.includes(lessonId)) return;
-
-      await axios.post(
+      const res = await axios.post(
         `http://localhost:5000/api/courses/${id}/lessons/${lessonId}/complete`,
         {},
         { headers: { Authorization: `Bearer ${auth.token}` } }
       );
 
-      setCourse((prevCourse) => {
-        const updatedCompletedLessons = [...prevCourse.completedLessons];
-        const existingStudent = updatedCompletedLessons.find(
-          (cl) => cl.student.toString() === auth.user.id
-        );
+      setCourse((prevCourse) => ({
+        ...prevCourse,
+        completedLessons: res.data.completedLessons,
+      }));
 
-        if (existingStudent) {
-          existingStudent.lessons = [
-            ...new Set([...existingStudent.lessons, lessonId]),
-          ];
-        } else {
-          updatedCompletedLessons.push({
-            student: auth.user.id,
-            lessons: [lessonId],
-          });
-        }
-
-        return { ...prevCourse, completedLessons: updatedCompletedLessons };
-      });
-    } catch (err) {
-      console.log(
-        err.response?.data?.message || "Failed to mark lesson complete"
+      const studentProgress = res.data.completedLessons.find(
+        (cl) => cl.student.toString() === auth.user.id
       );
+
+      if (studentProgress) {
+        setProgress(
+          Math.floor(
+            (studentProgress.lessons.length / course.lessons.length) * 100
+          )
+        );
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to mark lesson complete");
     }
   };
+
+  if (loading) return <p>Loading course...</p>;
+  if (error) return <p className="text-danger">{error}</p>;
+  if (!course) return <p>Course not found</p>;
+
+  const alreadyEnrolled =
+    auth?.user &&
+    course.enrolledStudents?.some(
+      (studentId) => studentId.toString() === auth.user.id
+    );
 
   const getYouTubeEmbedUrl = (url) => {
     try {
@@ -113,11 +123,6 @@ export default function CourseDetails() {
   const renderLessonContent = () => {
     if (!selectedLesson) return null;
 
-    const completed =
-      course.completedLessons
-        ?.find((cl) => cl.student.toString() === auth.user.id)
-        ?.lessons.includes(selectedLesson._id) || false;
-
     switch (selectedLesson.contentType) {
       case "video":
         const embedUrl =
@@ -126,26 +131,18 @@ export default function CourseDetails() {
             ? getYouTubeEmbedUrl(selectedLesson.url)
             : selectedLesson.url;
 
-        if (embedUrl.includes("youtube.com/embed")) {
-          return (
-            <iframe
-              key={selectedLesson._id}
-              id="youtube-player"
-              width="100%"
-              height="400"
-              src={embedUrl + "?enablejsapi=1"}
-              title={selectedLesson.title}
-              frameBorder="0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-              onLoad={() => handleCompleteLesson(selectedLesson._id)}
-            />
-          );
-        }
-
-        return (
+        return embedUrl.includes("youtube.com/embed") ? (
+          <iframe
+            width="100%"
+            height="400"
+            src={embedUrl}
+            title={selectedLesson.title}
+            frameBorder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          />
+        ) : (
           <video
-            key={selectedLesson._id}
             width="100%"
             height="400"
             controls
@@ -157,27 +154,31 @@ export default function CourseDetails() {
         );
 
       case "pdf":
+        // Auto mark as complete when iframe is rendered
+        useEffect(() => {
+          handleCompleteLesson(selectedLesson._id);
+        }, [selectedLesson]);
         return (
           <iframe
-            key={selectedLesson._id}
             width="100%"
             height="500"
             src={selectedLesson.url}
             title={selectedLesson.title}
             frameBorder="0"
-            onLoad={() => handleCompleteLesson(selectedLesson._id)}
-          />
+          ></iframe>
         );
 
       case "doc":
+        // Auto mark as complete when document is opened
+        useEffect(() => {
+          handleCompleteLesson(selectedLesson._id);
+        }, [selectedLesson]);
         return (
           <a
-            key={selectedLesson._id}
             href={selectedLesson.url}
             target="_blank"
             rel="noopener noreferrer"
             className="btn btn-primary"
-            onClick={() => handleCompleteLesson(selectedLesson._id)}
           >
             Open Document
           </a>
@@ -187,30 +188,6 @@ export default function CourseDetails() {
         return <p>Unknown lesson type</p>;
     }
   };
-
-  if (loading) return <p>Loading course...</p>;
-  if (error) return <p className="text-danger">{error}</p>;
-  if (!course) return <p>Course not found</p>;
-
-  const alreadyEnrolled =
-    auth?.user &&
-    course.enrolledStudents?.some(
-      (studentId) => studentId.toString() === auth.user.id
-    );
-
-  // Calculate progress dynamically
-  let progress = 0;
-  if (alreadyEnrolled) {
-    const totalLessons = course.lessons?.length || 1;
-    const studentCompleted = course.completedLessons?.find(
-      (cl) => cl.student.toString() === auth.user?.id
-    );
-    const completedCount =
-      studentCompleted?.lessons.filter((lessonId) =>
-        course.lessons.some((l) => l._id === lessonId)
-      ).length || 0;
-    progress = Math.floor((completedCount / totalLessons) * 100);
-  }
 
   return (
     <div className="container mt-4">
@@ -254,22 +231,13 @@ export default function CourseDetails() {
           )}
         </>
       )}
-
-        <div className="mt-3">
-        <Link
-          to={`/student/courses/${id}/discussion`}
-          className="btn btn-outline-info"
-        >
-          Go to Discussion Board
-        </Link>
-      </div>
-
       {enrollMsg && <p className="mt-2">{enrollMsg}</p>}
 
       {alreadyEnrolled && (
         <>
           <hr />
           <h4>Lessons</h4>
+
           {course.lessons?.length === 0 && <p>No lessons added yet.</p>}
 
           <div className="row">

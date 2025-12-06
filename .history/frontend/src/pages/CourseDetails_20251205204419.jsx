@@ -1,5 +1,5 @@
 import { useEffect, useState, useContext } from "react";
-import { useParams,Link } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import axios from "axios";
 import { AuthContext } from "../context/AuthContext";
 
@@ -12,8 +12,8 @@ export default function CourseDetails() {
   const [error, setError] = useState("");
   const [enrollMsg, setEnrollMsg] = useState("");
   const [selectedLesson, setSelectedLesson] = useState(null);
+  const [progress, setProgress] = useState(0);
 
-  // Fetch course details
   useEffect(() => {
     const fetchCourse = async () => {
       try {
@@ -21,6 +21,24 @@ export default function CourseDetails() {
           headers: { Authorization: `Bearer ${auth?.token}` },
         });
         setCourse(res.data.course);
+
+        // Calculate initial progress if already enrolled
+        if (auth?.user) {
+          const studentProgress = res.data.course.completedLessons?.find(
+            (cl) =>
+              cl.student === auth.user.id ||
+              cl.student === auth.user.id.toString()
+          );
+          if (studentProgress) {
+            setProgress(
+              Math.floor(
+                (studentProgress.lessons.length /
+                  res.data.course.lessons.length) *
+                  100
+              )
+            );
+          }
+        }
       } catch (err) {
         setError("Failed to load course details");
       } finally {
@@ -30,14 +48,6 @@ export default function CourseDetails() {
 
     if (auth?.token) fetchCourse();
   }, [id, auth?.token]);
-
-  useEffect(() => {
-    if (!window.YT) {
-      const tag = document.createElement("script");
-      tag.src = "https://www.youtube.com/iframe_api";
-      document.body.appendChild(tag);
-    }
-  }, []);
 
   const handleEnroll = async () => {
     try {
@@ -55,136 +65,14 @@ export default function CourseDetails() {
 
   const handleCompleteLesson = async (lessonId) => {
     try {
-      const studentProgress = course.completedLessons?.find(
-        (cl) => cl.student.toString() === auth.user.id
-      );
-      if (studentProgress?.lessons.includes(lessonId)) return;
-
-      await axios.post(
+      const res = await axios.post(
         `http://localhost:5000/api/courses/${id}/lessons/${lessonId}/complete`,
         {},
         { headers: { Authorization: `Bearer ${auth.token}` } }
       );
-
-      setCourse((prevCourse) => {
-        const updatedCompletedLessons = [...prevCourse.completedLessons];
-        const existingStudent = updatedCompletedLessons.find(
-          (cl) => cl.student.toString() === auth.user.id
-        );
-
-        if (existingStudent) {
-          existingStudent.lessons = [
-            ...new Set([...existingStudent.lessons, lessonId]),
-          ];
-        } else {
-          updatedCompletedLessons.push({
-            student: auth.user.id,
-            lessons: [lessonId],
-          });
-        }
-
-        return { ...prevCourse, completedLessons: updatedCompletedLessons };
-      });
+      setProgress(res.data.progress);
     } catch (err) {
-      console.log(
-        err.response?.data?.message || "Failed to mark lesson complete"
-      );
-    }
-  };
-
-  const getYouTubeEmbedUrl = (url) => {
-    try {
-      const urlObj = new URL(url);
-      if (
-        urlObj.hostname.includes("youtube.com") &&
-        urlObj.searchParams.has("v")
-      ) {
-        return `https://www.youtube.com/embed/${urlObj.searchParams.get("v")}`;
-      }
-      if (urlObj.hostname === "youtu.be") {
-        return `https://www.youtube.com/embed/${urlObj.pathname.slice(1)}`;
-      }
-      return url;
-    } catch {
-      return url;
-    }
-  };
-
-  const renderLessonContent = () => {
-    if (!selectedLesson) return null;
-
-    const completed =
-      course.completedLessons
-        ?.find((cl) => cl.student.toString() === auth.user.id)
-        ?.lessons.includes(selectedLesson._id) || false;
-
-    switch (selectedLesson.contentType) {
-      case "video":
-        const embedUrl =
-          selectedLesson.url.includes("youtube.com") ||
-          selectedLesson.url.includes("youtu.be")
-            ? getYouTubeEmbedUrl(selectedLesson.url)
-            : selectedLesson.url;
-
-        if (embedUrl.includes("youtube.com/embed")) {
-          return (
-            <iframe
-              key={selectedLesson._id}
-              id="youtube-player"
-              width="100%"
-              height="400"
-              src={embedUrl + "?enablejsapi=1"}
-              title={selectedLesson.title}
-              frameBorder="0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-              onLoad={() => handleCompleteLesson(selectedLesson._id)}
-            />
-          );
-        }
-
-        return (
-          <video
-            key={selectedLesson._id}
-            width="100%"
-            height="400"
-            controls
-            onEnded={() => handleCompleteLesson(selectedLesson._id)}
-          >
-            <source src={selectedLesson.url} type="video/mp4" />
-            Your browser does not support the video tag.
-          </video>
-        );
-
-      case "pdf":
-        return (
-          <iframe
-            key={selectedLesson._id}
-            width="100%"
-            height="500"
-            src={selectedLesson.url}
-            title={selectedLesson.title}
-            frameBorder="0"
-            onLoad={() => handleCompleteLesson(selectedLesson._id)}
-          />
-        );
-
-      case "doc":
-        return (
-          <a
-            key={selectedLesson._id}
-            href={selectedLesson.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn btn-primary"
-            onClick={() => handleCompleteLesson(selectedLesson._id)}
-          >
-            Open Document
-          </a>
-        );
-
-      default:
-        return <p>Unknown lesson type</p>;
+      alert(err.response?.data?.message || "Failed to mark lesson complete");
     }
   };
 
@@ -198,22 +86,96 @@ export default function CourseDetails() {
       (studentId) => studentId.toString() === auth.user.id
     );
 
-  // Calculate progress dynamically
-  let progress = 0;
-  if (alreadyEnrolled) {
-    const totalLessons = course.lessons?.length || 1;
-    const studentCompleted = course.completedLessons?.find(
-      (cl) => cl.student.toString() === auth.user?.id
-    );
-    const completedCount =
-      studentCompleted?.lessons.filter((lessonId) =>
-        course.lessons.some((l) => l._id === lessonId)
-      ).length || 0;
-    progress = Math.floor((completedCount / totalLessons) * 100);
-  }
+  // -------------------- Lesson Content Renderer --------------------
+  const getYouTubeEmbedUrl = (url) => {
+    try {
+      const urlObj = new URL(url);
+
+      // Standard YouTube URL
+      if (
+        urlObj.hostname.includes("youtube.com") &&
+        urlObj.searchParams.has("v")
+      ) {
+        return `https://www.youtube.com/embed/${urlObj.searchParams.get("v")}`;
+      }
+
+      // Shortened URL
+      if (urlObj.hostname === "youtu.be") {
+        return `https://www.youtube.com/embed/${urlObj.pathname.slice(1)}`;
+      }
+
+      // Already embed or other links
+      return url;
+    } catch {
+      return url;
+    }
+  };
+
+  const renderLessonContent = () => {
+    if (!selectedLesson) return null;
+
+    switch (selectedLesson.contentType) {
+      case "video":
+        // Embed YouTube if link, otherwise fallback to regular video
+        const embedUrl =
+          selectedLesson.url.includes("youtube.com") ||
+          selectedLesson.url.includes("youtu.be")
+            ? getYouTubeEmbedUrl(selectedLesson.url)
+            : selectedLesson.url;
+
+        return embedUrl.includes("youtube.com/embed") ? (
+          <iframe
+            width="100%"
+            height="400"
+            src={embedUrl}
+            title={selectedLesson.title}
+            frameBorder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          />
+        ) : (
+          <video
+            width="100%"
+            height="400"
+            controls
+            onEnded={() => handleCompleteLesson(selectedLesson._id)}
+          >
+            <source src={selectedLesson.url} type="video/mp4" />
+            Your browser does not support the video tag.
+          </video>
+        );
+
+      case "pdf":
+        return (
+          <iframe
+            width="100%"
+            height="500"
+            src={selectedLesson.url}
+            title={selectedLesson.title}
+            frameBorder="0"
+          ></iframe>
+        );
+
+      case "doc":
+        return (
+          <a
+            href={selectedLesson.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-primary"
+          >
+            Open Document
+          </a>
+        );
+
+      default:
+        return <p>Unknown lesson type</p>;
+    }
+  };
 
   return (
     <div className="container mt-4">
+      {/* Course Info */}
       <h2>{course.title}</h2>
       <p>{course.description}</p>
       <p>
@@ -223,6 +185,7 @@ export default function CourseDetails() {
         <strong>Instructor:</strong> {course.instructor?.name || "Unknown"}
       </p>
 
+      {/* Progress Bar */}
       {alreadyEnrolled && (
         <div className="mb-3">
           <strong>Progress:</strong>
@@ -241,6 +204,7 @@ export default function CourseDetails() {
         </div>
       )}
 
+      {/* Enroll Button */}
       {auth?.user?.role === "student" && (
         <>
           {!alreadyEnrolled ? (
@@ -254,25 +218,18 @@ export default function CourseDetails() {
           )}
         </>
       )}
-
-        <div className="mt-3">
-        <Link
-          to={`/student/courses/${id}/discussion`}
-          className="btn btn-outline-info"
-        >
-          Go to Discussion Board
-        </Link>
-      </div>
-
       {enrollMsg && <p className="mt-2">{enrollMsg}</p>}
 
+      {/* Lessons List & Viewer */}
       {alreadyEnrolled && (
         <>
           <hr />
           <h4>Lessons</h4>
+
           {course.lessons?.length === 0 && <p>No lessons added yet.</p>}
 
           <div className="row">
+            {/* Lesson Menu */}
             <div className="col-md-4">
               <ul className="list-group">
                 {course.lessons?.map((lesson, index) => {
@@ -300,11 +257,28 @@ export default function CourseDetails() {
               </ul>
             </div>
 
+            {/* Lesson Viewer */}
             <div className="col-md-8">
               <h5>Lesson Viewer</h5>
               {!selectedLesson && <p>Select a lesson to start learning</p>}
               {selectedLesson && (
-                <div className="card p-3">{renderLessonContent()}</div>
+                <div className="card p-3">
+                  {renderLessonContent()}
+                  {/* Mark as Completed Button for PDFs/Docs only */}
+                  {selectedLesson.contentType !== "video" &&
+                    !course.completedLessons?.some(
+                      (cl) =>
+                        cl.student.toString() === auth.user.id &&
+                        cl.lessons.includes(selectedLesson._id)
+                    ) && (
+                      <button
+                        className="btn btn-success mt-2"
+                        onClick={() => handleCompleteLesson(selectedLesson._id)}
+                      >
+                        Mark as Completed
+                      </button>
+                    )}
+                </div>
               )}
             </div>
           </div>

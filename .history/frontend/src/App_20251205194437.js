@@ -23,10 +23,8 @@ import { AuthContext } from "./context/AuthContext";
 import CourseDetails from "./pages/CourseDetails";
 import MyCourses from "./pages/MyCourses";
 import EditCourse from "./pages/EditCourse";
-import CourseDiscussion from "./pages/CourseDiscussion";
 import AddLesson from "./pages/AddLesson";
 import CourseList from "./pages/CourseList";
-import InstructorCourseDetails from "./pages/InstructorCourseDetails";
 
 function App() {
   const { auth, logout } = useContext(AuthContext);
@@ -103,11 +101,6 @@ function App() {
           }
         />
         <Route
-          path="/student/courses/:id/discussion"
-          element={<CourseDiscussion />}
-            />
-
-        <Route
           path="/instructor/course/:id/edit"
           element={
             auth.user?.role === "instructor" ? (
@@ -122,15 +115,6 @@ function App() {
 
         {/* Keep fallback route if needed */}
         <Route path="*" element={<Navigate to="/" />} />
-        <Route
-          path="/instructor/courses/:id"
-          element={<InstructorCourseDetails />}
-        />
-
-        <Route
-          path="/instructor/courses/:id/add-lesson"
-          element={<AddLesson />}
-        />
       </Routes>
     </BrowserRouter>
   );

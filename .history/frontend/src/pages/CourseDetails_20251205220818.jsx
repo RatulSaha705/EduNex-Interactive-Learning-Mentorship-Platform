@@ -1,5 +1,5 @@
 import { useEffect, useState, useContext } from "react";
-import { useParams,Link } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import axios from "axios";
 import { AuthContext } from "../context/AuthContext";
 
@@ -12,6 +12,7 @@ export default function CourseDetails() {
   const [error, setError] = useState("");
   const [enrollMsg, setEnrollMsg] = useState("");
   const [selectedLesson, setSelectedLesson] = useState(null);
+  const [progress, setProgress] = useState(0);
 
   // Fetch course details
   useEffect(() => {
@@ -21,6 +22,23 @@ export default function CourseDetails() {
           headers: { Authorization: `Bearer ${auth?.token}` },
         });
         setCourse(res.data.course);
+
+        if (auth?.user) {
+          const studentProgress = res.data.course.completedLessons?.find(
+            (cl) =>
+              cl.student === auth.user.id ||
+              cl.student === auth.user.id.toString()
+          );
+          if (studentProgress) {
+            setProgress(
+              Math.floor(
+                (studentProgress.lessons.length /
+                  res.data.course.lessons.length) *
+                  100
+              )
+            );
+          }
+        }
       } catch (err) {
         setError("Failed to load course details");
       } finally {
@@ -31,6 +49,7 @@ export default function CourseDetails() {
     if (auth?.token) fetchCourse();
   }, [id, auth?.token]);
 
+  // Load YouTube API
   useEffect(() => {
     if (!window.YT) {
       const tag = document.createElement("script");
@@ -55,40 +74,30 @@ export default function CourseDetails() {
 
   const handleCompleteLesson = async (lessonId) => {
     try {
-      const studentProgress = course.completedLessons?.find(
-        (cl) => cl.student.toString() === auth.user.id
-      );
-      if (studentProgress?.lessons.includes(lessonId)) return;
-
-      await axios.post(
+      const res = await axios.post(
         `http://localhost:5000/api/courses/${id}/lessons/${lessonId}/complete`,
         {},
         { headers: { Authorization: `Bearer ${auth.token}` } }
       );
 
-      setCourse((prevCourse) => {
-        const updatedCompletedLessons = [...prevCourse.completedLessons];
-        const existingStudent = updatedCompletedLessons.find(
-          (cl) => cl.student.toString() === auth.user.id
-        );
+      setCourse((prevCourse) => ({
+        ...prevCourse,
+        completedLessons: res.data.completedLessons,
+      }));
 
-        if (existingStudent) {
-          existingStudent.lessons = [
-            ...new Set([...existingStudent.lessons, lessonId]),
-          ];
-        } else {
-          updatedCompletedLessons.push({
-            student: auth.user.id,
-            lessons: [lessonId],
-          });
-        }
-
-        return { ...prevCourse, completedLessons: updatedCompletedLessons };
-      });
-    } catch (err) {
-      console.log(
-        err.response?.data?.message || "Failed to mark lesson complete"
+      const studentProgress = res.data.completedLessons.find(
+        (cl) => cl.student.toString() === auth.user.id
       );
+
+      if (studentProgress) {
+        setProgress(
+          Math.floor(
+            (studentProgress.lessons.length / course.lessons.length) * 100
+          )
+        );
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to mark lesson complete");
     }
   };
 
@@ -113,11 +122,6 @@ export default function CourseDetails() {
   const renderLessonContent = () => {
     if (!selectedLesson) return null;
 
-    const completed =
-      course.completedLessons
-        ?.find((cl) => cl.student.toString() === auth.user.id)
-        ?.lessons.includes(selectedLesson._id) || false;
-
     switch (selectedLesson.contentType) {
       case "video":
         const embedUrl =
@@ -126,6 +130,7 @@ export default function CourseDetails() {
             ? getYouTubeEmbedUrl(selectedLesson.url)
             : selectedLesson.url;
 
+        // Force React to remount iframe by using key
         if (embedUrl.includes("youtube.com/embed")) {
           return (
             <iframe
@@ -138,7 +143,7 @@ export default function CourseDetails() {
               frameBorder="0"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
-              onLoad={() => handleCompleteLesson(selectedLesson._id)}
+              onLoad={() => handleCompleteLesson(selectedLesson._id)} // mark progress on open
             />
           );
         }
@@ -150,6 +155,7 @@ export default function CourseDetails() {
             height="400"
             controls
             onEnded={() => handleCompleteLesson(selectedLesson._id)}
+            onPlay={() => handleCompleteLesson(selectedLesson._id)} // mark progress when video starts
           >
             <source src={selectedLesson.url} type="video/mp4" />
             Your browser does not support the video tag.
@@ -165,7 +171,7 @@ export default function CourseDetails() {
             src={selectedLesson.url}
             title={selectedLesson.title}
             frameBorder="0"
-            onLoad={() => handleCompleteLesson(selectedLesson._id)}
+            onLoad={() => handleCompleteLesson(selectedLesson._id)} // mark progress when opened
           />
         );
 
@@ -177,7 +183,7 @@ export default function CourseDetails() {
             target="_blank"
             rel="noopener noreferrer"
             className="btn btn-primary"
-            onClick={() => handleCompleteLesson(selectedLesson._id)}
+            onClick={() => handleCompleteLesson(selectedLesson._id)} // mark progress when clicked
           >
             Open Document
           </a>
@@ -197,20 +203,6 @@ export default function CourseDetails() {
     course.enrolledStudents?.some(
       (studentId) => studentId.toString() === auth.user.id
     );
-
-  // Calculate progress dynamically
-  let progress = 0;
-  if (alreadyEnrolled) {
-    const totalLessons = course.lessons?.length || 1;
-    const studentCompleted = course.completedLessons?.find(
-      (cl) => cl.student.toString() === auth.user?.id
-    );
-    const completedCount =
-      studentCompleted?.lessons.filter((lessonId) =>
-        course.lessons.some((l) => l._id === lessonId)
-      ).length || 0;
-    progress = Math.floor((completedCount / totalLessons) * 100);
-  }
 
   return (
     <div className="container mt-4">
@@ -254,16 +246,6 @@ export default function CourseDetails() {
           )}
         </>
       )}
-
-        <div className="mt-3">
-        <Link
-          to={`/student/courses/${id}/discussion`}
-          className="btn btn-outline-info"
-        >
-          Go to Discussion Board
-        </Link>
-      </div>
-
       {enrollMsg && <p className="mt-2">{enrollMsg}</p>}
 
       {alreadyEnrolled && (

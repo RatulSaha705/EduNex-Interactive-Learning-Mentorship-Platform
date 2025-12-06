@@ -1,5 +1,5 @@
 import { useEffect, useState, useContext } from "react";
-import { useParams,Link } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import axios from "axios";
 import { AuthContext } from "../context/AuthContext";
 
@@ -12,6 +12,17 @@ export default function CourseDetails() {
   const [error, setError] = useState("");
   const [enrollMsg, setEnrollMsg] = useState("");
   const [selectedLesson, setSelectedLesson] = useState(null);
+  const [progress, setProgress] = useState(0);
+
+  const calculateProgress = (course, userId) => {
+    if (!course?.lessons?.length) return 0;
+    const totalLessons = course.lessons.length;
+    const studentProgress = course.completedLessons?.find(
+      (cl) => cl.student.toString() === userId
+    );
+    const completedCount = studentProgress?.lessons?.length || 0;
+    return Math.min(Math.floor((completedCount / totalLessons) * 100), 100);
+  };
 
   // Fetch course details
   useEffect(() => {
@@ -30,6 +41,13 @@ export default function CourseDetails() {
 
     if (auth?.token) fetchCourse();
   }, [id, auth?.token]);
+
+  // Update progress dynamically whenever course or completedLessons change
+  useEffect(() => {
+    if (course && auth?.user) {
+      setProgress(calculateProgress(course, auth.user.id));
+    }
+  }, [course, auth?.user]);
 
   useEffect(() => {
     if (!window.YT) {
@@ -83,7 +101,10 @@ export default function CourseDetails() {
           });
         }
 
-        return { ...prevCourse, completedLessons: updatedCompletedLessons };
+        return {
+          ...prevCourse,
+          completedLessons: updatedCompletedLessons,
+        };
       });
     } catch (err) {
       console.log(
@@ -198,20 +219,6 @@ export default function CourseDetails() {
       (studentId) => studentId.toString() === auth.user.id
     );
 
-  // Calculate progress dynamically
-  let progress = 0;
-  if (alreadyEnrolled) {
-    const totalLessons = course.lessons?.length || 1;
-    const studentCompleted = course.completedLessons?.find(
-      (cl) => cl.student.toString() === auth.user?.id
-    );
-    const completedCount =
-      studentCompleted?.lessons.filter((lessonId) =>
-        course.lessons.some((l) => l._id === lessonId)
-      ).length || 0;
-    progress = Math.floor((completedCount / totalLessons) * 100);
-  }
-
   return (
     <div className="container mt-4">
       <h2>{course.title}</h2>
@@ -254,16 +261,6 @@ export default function CourseDetails() {
           )}
         </>
       )}
-
-        <div className="mt-3">
-        <Link
-          to={`/student/courses/${id}/discussion`}
-          className="btn btn-outline-info"
-        >
-          Go to Discussion Board
-        </Link>
-      </div>
-
       {enrollMsg && <p className="mt-2">{enrollMsg}</p>}
 
       {alreadyEnrolled && (

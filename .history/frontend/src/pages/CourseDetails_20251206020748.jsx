@@ -1,5 +1,5 @@
 import { useEffect, useState, useContext } from "react";
-import { useParams,Link } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import axios from "axios";
 import { AuthContext } from "../context/AuthContext";
 
@@ -254,16 +254,6 @@ export default function CourseDetails() {
           )}
         </>
       )}
-
-        <div className="mt-3">
-        <Link
-          to={`/student/courses/${id}/discussion`}
-          className="btn btn-outline-info"
-        >
-          Go to Discussion Board
-        </Link>
-      </div>
-
       {enrollMsg && <p className="mt-2">{enrollMsg}</p>}
 
       {alreadyEnrolled && (

@@ -32,8 +32,16 @@ const courseSchema = new mongoose.Schema(
     ],
     completedLessons: [
       {
-        student: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-        lessons: [{ type: mongoose.Schema.Types.ObjectId }],
+        student: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+        },
+        lessons: [
+          {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Lesson", // optional, or just store lesson _id
+          },
+        ],
       },
     ],
   },
