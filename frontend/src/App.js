@@ -108,6 +108,11 @@ function App() {
             />
 
         <Route
+          path="/instructor/courses/:id/discussion"
+          element={<CourseDiscussion />}
+            />
+
+        <Route
           path="/instructor/course/:id/edit"
           element={
             auth.user?.role === "instructor" ? (

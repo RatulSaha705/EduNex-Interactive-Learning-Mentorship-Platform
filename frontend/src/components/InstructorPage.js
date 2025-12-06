@@ -149,12 +149,21 @@ export default function InstructorPage() {
                 Edit
               </Link>
 
+
+
               <Link
                 to={`/instructor/courses/${course._id}`}
                 className="btn btn-sm btn-primary me-2"
               >
                 Manage Lessons
               </Link>
+
+              <Link
+                  to={`/instructor/courses/${course._id}/discussion`}
+                  className="btn btn-sm btn-outline-secondary me-2"
+                >
+                  Discussion Board
+                </Link>
 
               <button
                 className="btn btn-sm btn-danger"
