@@ -17,6 +17,16 @@ const answerSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+
+    // 🔹 NEW: who has upvoted this answer
+    upvotedBy: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
+
+    // numeric count (derived from upvotedBy.length)
     upvotes: {
       type: Number,
       default: 0,
@@ -30,5 +40,4 @@ const answerSchema = new mongoose.Schema(
 );
 
 const Answer = mongoose.model("Answer", answerSchema);
-
 export default Answer;

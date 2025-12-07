@@ -232,9 +232,9 @@ export default function CourseDiscussion() {
           },
         }
       );
-
+  
       const newUpvotes = res.data.upvotes;
-
+  
       setAnswersByQuestion((prev) => ({
         ...prev,
         [questionId]: (prev[questionId] || []).map((ans) =>
@@ -248,7 +248,7 @@ export default function CourseDiscussion() {
       );
     }
   };
-
+  
   // ----------------- MARK HELPFUL ----------------- //
   const handleMarkHelpful = async (questionId, answerId) => {
     try {
@@ -356,10 +356,9 @@ export default function CourseDiscussion() {
               const qId = q._id;
               const answers = answersByQuestion[qId] || [];
               const canMarkHelpful =
-                userId &&
-                (q.user?._id === userId ||
-                  userRole === "instructor" ||
-                  userRole === "admin");
+                  userId && q.user && q.user._id === userId;
+
+            
 
               const helpfulAnswer = answers.find((a) => a.isMarkedHelpful);
 

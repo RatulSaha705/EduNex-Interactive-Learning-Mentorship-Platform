@@ -121,7 +121,63 @@ export const getQuestionAnswers = async (req, res) => {
 // -------------------- UPVOTE & MARK HELPFUL -------------------- //
 
 // Upvote an answer (any logged-in user)
+// Upvote / un-upvote an answer (toggle, one user = one vote)
+// Upvote / un-upvote an answer (toggle, one user = one vote)
 export const upvoteAnswer = async (req, res) => {
+  try {
+    const { answerId } = req.params;
+    const userId = req.user._id.toString();
+
+    const answer = await Answer.findById(answerId);
+    if (!answer) {
+      return res.status(404).json({ message: "Answer not found" });
+    }
+
+    // make sure array exists
+    if (!Array.isArray(answer.upvotedBy)) {
+      answer.upvotedBy = [];
+    }
+
+    // Check if this user already upvoted
+    const index = answer.upvotedBy.findIndex(
+      (u) => u.toString() === userId
+    );
+
+    let hasUpvoted;
+
+    if (index === -1) {
+      // ✅ First time click → add vote
+      answer.upvotedBy.push(req.user._id);
+      hasUpvoted = true;
+    } else {
+      // ✅ Second click → remove vote
+      answer.upvotedBy.splice(index, 1);
+      hasUpvoted = false;
+    }
+
+    // Count is just length of upvotedBy
+    answer.upvotes = answer.upvotedBy.length;
+
+    await answer.save();
+
+    res.json({
+      message: hasUpvoted
+        ? "Answer upvoted successfully"
+        : "Answer upvote removed",
+      upvotes: answer.upvotes,
+      hasUpvoted,
+    });
+  } catch (error) {
+    console.error("Error upvoting answer:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/// Mark / unmark an answer as helpful
+// Rules:
+// - ONLY the student who posted the question can do this
+// - Multiple answers can be helpful for the same question
+export const markAnswerHelpful = async (req, res) => {
   try {
     const { answerId } = req.params;
 
@@ -130,62 +186,30 @@ export const upvoteAnswer = async (req, res) => {
       return res.status(404).json({ message: "Answer not found" });
     }
 
-    // Simple implementation: each request +1 (no per-user tracking)
-    answer.upvotes += 1;
-    await answer.save();
-
-    res.json({
-      message: "Answer upvoted successfully",
-      upvotes: answer.upvotes,
-    });
-  } catch (error) {
-    console.error("Error upvoting answer:", error);
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// Mark an answer as helpful / best answer
-export const markAnswerHelpful = async (req, res) => {
-  try {
-    const { answerId } = req.params;
-
-    // Load answer with its question
-    const answer = await Answer.findById(answerId).populate("question");
-    if (!answer) {
-      return res.status(404).json({ message: "Answer not found" });
-    }
-
-    const question = await Question.findById(answer.question._id);
+    const question = await Question.findById(answer.question);
     if (!question) {
       return res.status(404).json({ message: "Parent question not found" });
     }
 
-    // Permission rule:
-    // Only the question owner OR an instructor/admin can mark helpful
-    const isQuestionOwner =
-      question.user.toString() === req.user._id.toString();
-    const isInstructorOrAdmin =
-      req.user.role === "instructor" || req.user.role === "admin";
-
-    if (!isQuestionOwner && !isInstructorOrAdmin) {
+    // ✅ Only the question author can mark helpful
+    if (question.user.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         message:
-          "Only the question author or an instructor/admin can mark an answer as helpful",
+          "Only the student who posted this question can mark answers as helpful",
       });
     }
 
-    // Unmark other answers for this question
-    await Answer.updateMany(
-      { question: question._id },
-      { $set: { isMarkedHelpful: false } }
-    );
-
-    // Mark this answer as helpful
-    answer.isMarkedHelpful = true;
+    // ✅ Toggle helpful on this answer (no unmarking of others)
+    answer.isMarkedHelpful = !answer.isMarkedHelpful;
     await answer.save();
 
-    // Mark the question as resolved
-    question.isResolved = true;
+    // Question is resolved if at least one helpful answer exists
+    const anyHelpful = await Answer.exists({
+      question: question._id,
+      isMarkedHelpful: true,
+    });
+
+    question.isResolved = !!anyHelpful;
     await question.save();
 
     const populatedAnswer = await Answer.findById(answerId).populate(
@@ -194,7 +218,9 @@ export const markAnswerHelpful = async (req, res) => {
     );
 
     res.json({
-      message: "Answer marked as helpful",
+      message: answer.isMarkedHelpful
+        ? "Answer marked as helpful"
+        : "Answer unmarked as helpful",
       answer: populatedAnswer,
     });
   } catch (error) {
