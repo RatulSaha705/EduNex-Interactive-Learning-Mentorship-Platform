@@ -18,7 +18,7 @@ export default function InstructorPage() {
   });
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [announcementInputs, setAnnouncementInputs] = useState({}); // per course input
+  const [announcementInputs, setAnnouncementInputs] = useState({}); // for each course
 
   useEffect(() => {
     if (location.state?.successMsg) {
@@ -35,6 +35,7 @@ export default function InstructorPage() {
       const res = await axios.get("http://localhost:5000/api/courses", {
         headers: { Authorization: `Bearer ${auth.token}` },
       });
+
       const myCourses = res.data.courses.filter(
         (c) => c.instructor._id === auth.user.id
       );
@@ -153,6 +154,7 @@ export default function InstructorPage() {
       {/* Create Course */}
       <div className="card p-3 mb-4">
         <h5>Create New Course</h5>
+
         <form onSubmit={handleSubmit}>
           <input
             type="text"
@@ -176,6 +178,7 @@ export default function InstructorPage() {
             value={form.category}
             onChange={(e) => setForm({ ...form, category: e.target.value })}
           />
+
           <div className="mb-2">
             <label>
               Start Date:
@@ -204,6 +207,7 @@ export default function InstructorPage() {
               />
             </label>
           </div>
+
           <select
             className="form-control mb-2"
             value={form.status}
@@ -212,6 +216,7 @@ export default function InstructorPage() {
             <option value="draft">Draft</option>
             <option value="published">Publish</option>
           </select>
+
           <button className="btn btn-primary">Create Course</button>
         </form>
 
@@ -267,12 +272,9 @@ export default function InstructorPage() {
                 />
                 <button
                   className="btn btn-primary"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    handleAddAnnouncement(course._id);
-                  }}
+                  onClick={() => handleAddAnnouncement(course._id)}
                 >
-                  POST
+                  Add
                 </button>
               </div>
               {(!course.announcements || course.announcements.length === 0) && (

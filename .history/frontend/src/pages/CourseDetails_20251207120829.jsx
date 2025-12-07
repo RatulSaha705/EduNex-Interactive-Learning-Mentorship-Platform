@@ -261,24 +261,11 @@ export default function CourseDetails() {
     <div className="container mt-4">
       <h2>{course.title}</h2>
       <p>{course.description}</p>
-
-      {/* Course Info visible for all roles */}
       <p>
         <strong>Category:</strong> {course.category || "N/A"}
       </p>
       <p>
         <strong>Instructor:</strong> {course.instructor?.name || "Unknown"}
-      </p>
-      <p>
-        <strong>Duration:</strong>{" "}
-        {course.startDate && course.endDate
-          ? `${new Date(course.startDate).toLocaleDateString()} - ${new Date(
-              course.endDate
-            ).toLocaleDateString()}`
-          : "N/A"}
-      </p>
-      <p>
-        <strong>Total Lessons:</strong> {course.lessons?.length || 0}
       </p>
 
       {/* Progress Bar */}
@@ -387,13 +374,19 @@ export default function CourseDetails() {
         </>
       )}
 
-      {/* Enroll button only for students who are not enrolled */}
-      {auth?.user?.role === "student" && !alreadyEnrolled && (
-        <button className="btn btn-primary" onClick={handleEnroll}>
-          Enroll
-        </button>
+      {auth?.user?.role === "student" && (
+        <>
+          {!alreadyEnrolled ? (
+            <button className="btn btn-primary" onClick={handleEnroll}>
+              Enroll
+            </button>
+          ) : (
+            <button className="btn btn-secondary" disabled>
+              Already Enrolled
+            </button>
+          )}
+        </>
       )}
-
       {enrollMsg && <p className="mt-2">{enrollMsg}</p>}
     </div>
   );

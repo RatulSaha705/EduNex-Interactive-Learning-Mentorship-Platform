@@ -17,12 +17,10 @@ export default function CourseDetails() {
 
   // Fetch course details
   useEffect(() => {
-    if (!auth?.token) return;
-
     const fetchCourse = async () => {
       try {
         const res = await axios.get(`http://localhost:5000/api/courses/${id}`, {
-          headers: { Authorization: `Bearer ${auth.token}` },
+          headers: { Authorization: `Bearer ${auth?.token}` },
         });
 
         const courseData = res.data.course;
@@ -43,7 +41,7 @@ export default function CourseDetails() {
       }
     };
 
-    fetchCourse();
+    if (auth?.token) fetchCourse();
   }, [id, auth?.token, auth?.user?.role]);
 
   useEffect(() => {
@@ -203,8 +201,9 @@ export default function CourseDetails() {
     }
   };
 
+  // Check if a lesson is locked (Lesson Locking System)
   const isLessonLocked = (lessonIndex) => {
-    if (lessonIndex === 0) return false;
+    if (lessonIndex === 0) return false; // First lesson is always unlocked
     const studentProgress = course.completedLessons?.find(
       (cl) => cl.student.toString() === auth.user.id
     );
@@ -212,6 +211,7 @@ export default function CourseDetails() {
     return !studentProgress?.lessons.includes(prevLessonId);
   };
 
+  // Add new announcement (Instructor)
   const handleAddAnnouncement = async () => {
     if (!newAnnouncement.trim()) return;
     try {
@@ -228,14 +228,14 @@ export default function CourseDetails() {
   };
 
   if (loading) return <p>Loading course...</p>;
-  if (!auth?.user) return <p>Please login to view course details</p>;
   if (error) return <p className="text-danger">{error}</p>;
   if (!course) return <p>Course not found</p>;
 
   const alreadyEnrolled =
+    auth?.user &&
     course.enrolledStudents?.some(
       (studentId) => studentId.toString() === auth.user.id
-    ) || false;
+    );
 
   let progress = 0;
   if (alreadyEnrolled) {
@@ -254,83 +254,58 @@ export default function CourseDetails() {
     const created = new Date(date);
     const now = new Date();
     const diffDays = (now - created) / (1000 * 60 * 60 * 24);
-    return diffDays <= 3;
+    return diffDays <= 3; // mark as new if within 3 days
   };
 
   return (
     <div className="container mt-4">
       <h2>{course.title}</h2>
       <p>{course.description}</p>
-
-      {/* Course Info visible for all roles */}
       <p>
         <strong>Category:</strong> {course.category || "N/A"}
       </p>
       <p>
         <strong>Instructor:</strong> {course.instructor?.name || "Unknown"}
       </p>
-      <p>
-        <strong>Duration:</strong>{" "}
-        {course.startDate && course.endDate
-          ? `${new Date(course.startDate).toLocaleDateString()} - ${new Date(
-              course.endDate
-            ).toLocaleDateString()}`
-          : "N/A"}
-      </p>
-      <p>
-        <strong>Total Lessons:</strong> {course.lessons?.length || 0}
-      </p>
-
-      {/* Progress Bar */}
-      {alreadyEnrolled && (
-        <div className="mb-3">
-          <h5>Course Progress: {progress}%</h5>
-          <div className="progress">
-            <div
-              className="progress-bar"
-              role="progressbar"
-              style={{ width: `${progress}%` }}
-              aria-valuenow={progress}
-              aria-valuemin="0"
-              aria-valuemax="100"
-            ></div>
-          </div>
-        </div>
-      )}
 
       {/* Announcements Panel */}
-      <hr />
-      <h4>Announcements</h4>
-
-      {auth.user.role === "instructor" && (
-        <div className="mb-3 d-flex">
-          <input
-            type="text"
-            className="form-control me-2"
-            placeholder="Add new announcement"
-            value={newAnnouncement}
-            onChange={(e) => setNewAnnouncement(e.target.value)}
-          />
-          <button className="btn btn-primary" onClick={handleAddAnnouncement}>
-            Add
-          </button>
-        </div>
+      {alreadyEnrolled && (
+        <>
+          <hr />
+          <h4>Announcements</h4>
+          {auth.user.role === "instructor" && (
+            <div className="mb-3 d-flex">
+              <input
+                type="text"
+                className="form-control me-2"
+                placeholder="Add new announcement"
+                value={newAnnouncement}
+                onChange={(e) => setNewAnnouncement(e.target.value)}
+              />
+              <button
+                className="btn btn-primary"
+                onClick={handleAddAnnouncement}
+              >
+                Add
+              </button>
+            </div>
+          )}
+          {announcements.length === 0 && <p>No announcements yet.</p>}
+          <ul className="list-group mb-3">
+            {announcements.map((a) => (
+              <li
+                key={a._id}
+                className="list-group-item d-flex justify-content-between align-items-center"
+              >
+                {a.content}
+                {isNew(a.createdAt) && (
+                  <span className="badge bg-warning">New</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </>
       )}
-
-      {announcements.length === 0 && <p>No announcements yet.</p>}
-      <ul className="list-group mb-3">
-        {announcements.map((a) => (
-          <li
-            key={a._id}
-            className="list-group-item d-flex justify-content-between align-items-center"
-          >
-            {a.content}
-            {isNew(a.createdAt) && (
-              <span className="badge bg-warning">New</span>
-            )}
-          </li>
-        ))}
-      </ul>
 
       {alreadyEnrolled && (
         <>
@@ -387,13 +362,19 @@ export default function CourseDetails() {
         </>
       )}
 
-      {/* Enroll button only for students who are not enrolled */}
-      {auth?.user?.role === "student" && !alreadyEnrolled && (
-        <button className="btn btn-primary" onClick={handleEnroll}>
-          Enroll
-        </button>
+      {auth?.user?.role === "student" && (
+        <>
+          {!alreadyEnrolled ? (
+            <button className="btn btn-primary" onClick={handleEnroll}>
+              Enroll
+            </button>
+          ) : (
+            <button className="btn btn-secondary" disabled>
+              Already Enrolled
+            </button>
+          )}
+        </>
       )}
-
       {enrollMsg && <p className="mt-2">{enrollMsg}</p>}
     </div>
   );

@@ -17,12 +17,10 @@ export default function CourseDetails() {
 
   // Fetch course details
   useEffect(() => {
-    if (!auth?.token) return;
-
     const fetchCourse = async () => {
       try {
         const res = await axios.get(`http://localhost:5000/api/courses/${id}`, {
-          headers: { Authorization: `Bearer ${auth.token}` },
+          headers: { Authorization: `Bearer ${auth?.token}` },
         });
 
         const courseData = res.data.course;
@@ -43,7 +41,7 @@ export default function CourseDetails() {
       }
     };
 
-    fetchCourse();
+    if (auth?.token) fetchCourse();
   }, [id, auth?.token, auth?.user?.role]);
 
   useEffect(() => {
@@ -228,14 +226,14 @@ export default function CourseDetails() {
   };
 
   if (loading) return <p>Loading course...</p>;
-  if (!auth?.user) return <p>Please login to view course details</p>;
   if (error) return <p className="text-danger">{error}</p>;
   if (!course) return <p>Course not found</p>;
 
   const alreadyEnrolled =
+    auth?.user &&
     course.enrolledStudents?.some(
       (studentId) => studentId.toString() === auth.user.id
-    ) || false;
+    );
 
   let progress = 0;
   if (alreadyEnrolled) {
@@ -261,47 +259,16 @@ export default function CourseDetails() {
     <div className="container mt-4">
       <h2>{course.title}</h2>
       <p>{course.description}</p>
-
-      {/* Course Info visible for all roles */}
       <p>
         <strong>Category:</strong> {course.category || "N/A"}
       </p>
       <p>
         <strong>Instructor:</strong> {course.instructor?.name || "Unknown"}
       </p>
-      <p>
-        <strong>Duration:</strong>{" "}
-        {course.startDate && course.endDate
-          ? `${new Date(course.startDate).toLocaleDateString()} - ${new Date(
-              course.endDate
-            ).toLocaleDateString()}`
-          : "N/A"}
-      </p>
-      <p>
-        <strong>Total Lessons:</strong> {course.lessons?.length || 0}
-      </p>
 
-      {/* Progress Bar */}
-      {alreadyEnrolled && (
-        <div className="mb-3">
-          <h5>Course Progress: {progress}%</h5>
-          <div className="progress">
-            <div
-              className="progress-bar"
-              role="progressbar"
-              style={{ width: `${progress}%` }}
-              aria-valuenow={progress}
-              aria-valuemin="0"
-              aria-valuemax="100"
-            ></div>
-          </div>
-        </div>
-      )}
-
-      {/* Announcements Panel */}
+      {/* Announcements Panel for both students and instructors */}
       <hr />
       <h4>Announcements</h4>
-
       {auth.user.role === "instructor" && (
         <div className="mb-3 d-flex">
           <input
@@ -316,7 +283,6 @@ export default function CourseDetails() {
           </button>
         </div>
       )}
-
       {announcements.length === 0 && <p>No announcements yet.</p>}
       <ul className="list-group mb-3">
         {announcements.map((a) => (
@@ -332,12 +298,12 @@ export default function CourseDetails() {
         ))}
       </ul>
 
+      {/* Lessons Panel */}
       {alreadyEnrolled && (
         <>
           <hr />
           <h4>Lessons</h4>
           {course.lessons?.length === 0 && <p>No lessons added yet.</p>}
-
           <div className="row">
             <div className="col-md-4">
               <ul className="list-group">
@@ -375,7 +341,6 @@ export default function CourseDetails() {
                 })}
               </ul>
             </div>
-
             <div className="col-md-8">
               <h5>Lesson Viewer</h5>
               {!selectedLesson && <p>Select a lesson to start learning</p>}
@@ -387,13 +352,20 @@ export default function CourseDetails() {
         </>
       )}
 
-      {/* Enroll button only for students who are not enrolled */}
-      {auth?.user?.role === "student" && !alreadyEnrolled && (
-        <button className="btn btn-primary" onClick={handleEnroll}>
-          Enroll
-        </button>
+      {/* Enroll Button for students */}
+      {auth?.user?.role === "student" && (
+        <>
+          {!alreadyEnrolled ? (
+            <button className="btn btn-primary" onClick={handleEnroll}>
+              Enroll
+            </button>
+          ) : (
+            <button className="btn btn-secondary" disabled>
+              Already Enrolled
+            </button>
+          )}
+        </>
       )}
-
       {enrollMsg && <p className="mt-2">{enrollMsg}</p>}
     </div>
   );

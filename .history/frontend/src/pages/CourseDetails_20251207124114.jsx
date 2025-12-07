@@ -270,12 +270,17 @@ export default function CourseDetails() {
         <strong>Instructor:</strong> {course.instructor?.name || "Unknown"}
       </p>
       <p>
-        <strong>Duration:</strong>{" "}
-        {course.startDate && course.endDate
-          ? `${new Date(course.startDate).toLocaleDateString()} - ${new Date(
-              course.endDate
-            ).toLocaleDateString()}`
+        <strong>Duration:</strong> {course.duration || "N/A"}
+      </p>
+      <p>
+        <strong>Start Date:</strong>{" "}
+        {course.startDate
+          ? new Date(course.startDate).toLocaleDateString()
           : "N/A"}
+      </p>
+      <p>
+        <strong>End Date:</strong>{" "}
+        {course.endDate ? new Date(course.endDate).toLocaleDateString() : "N/A"}
       </p>
       <p>
         <strong>Total Lessons:</strong> {course.lessons?.length || 0}

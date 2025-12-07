@@ -298,10 +298,12 @@ export const canAccessLesson = async (req, res, next) => {
 export const addAnnouncement = async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, content } = req.body;
+    const { content } = req.body;
 
     if (!content || content.trim() === "") {
-      return res.status(400).json({ message: "Content is required" });
+      return res
+        .status(400)
+        .json({ message: "Announcement content is required" });
     }
 
     const course = await Course.findById(id);
@@ -311,26 +313,15 @@ export const addAnnouncement = async (req, res) => {
       return res.status(403).json({ message: "Not allowed" });
     }
 
-    // Set default title if missing
-    const newAnnouncement = {
-      title: title?.trim() || "Announcement",
-      content: content.trim(),
-      createdAt: new Date(),
-    };
-
-    // Initialize announcements array if undefined
+    const newAnnouncement = { content: content.trim(), createdAt: new Date() };
     course.announcements = course.announcements || [];
     course.announcements.push(newAnnouncement);
 
     await course.save();
 
-    res.status(201).json({
-      message: "Announcement added",
-      announcements: course.announcements,
-      announcement: newAnnouncement,
-    });
+    // Return updated announcements array
+    res.status(201).json({ announcements: course.announcements });
   } catch (error) {
-    console.error("Add announcement error:", error);
     res.status(500).json({ message: "Failed to add announcement" });
   }
 };

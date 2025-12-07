@@ -267,12 +267,9 @@ export default function InstructorPage() {
                 />
                 <button
                   className="btn btn-primary"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    handleAddAnnouncement(course._id);
-                  }}
+                  onClick={() => handleAddAnnouncement(course._id)}
                 >
-                  POST
+                  Add
                 </button>
               </div>
               {(!course.announcements || course.announcements.length === 0) && (

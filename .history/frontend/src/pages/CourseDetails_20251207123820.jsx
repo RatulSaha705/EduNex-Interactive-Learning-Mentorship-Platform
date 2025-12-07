@@ -262,7 +262,7 @@ export default function CourseDetails() {
       <h2>{course.title}</h2>
       <p>{course.description}</p>
 
-      {/* Course Info visible for all roles */}
+      {/* Course Info always visible for all roles */}
       <p>
         <strong>Category:</strong> {course.category || "N/A"}
       </p>
@@ -270,12 +270,7 @@ export default function CourseDetails() {
         <strong>Instructor:</strong> {course.instructor?.name || "Unknown"}
       </p>
       <p>
-        <strong>Duration:</strong>{" "}
-        {course.startDate && course.endDate
-          ? `${new Date(course.startDate).toLocaleDateString()} - ${new Date(
-              course.endDate
-            ).toLocaleDateString()}`
-          : "N/A"}
+        <strong>Duration:</strong> {course.duration || "N/A"} {/* <-- added */}
       </p>
       <p>
         <strong>Total Lessons:</strong> {course.lessons?.length || 0}

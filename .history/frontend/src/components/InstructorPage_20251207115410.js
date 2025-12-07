@@ -272,7 +272,7 @@ export default function InstructorPage() {
                     handleAddAnnouncement(course._id);
                   }}
                 >
-                  POST
+                  Add
                 </button>
               </div>
               {(!course.announcements || course.announcements.length === 0) && (
