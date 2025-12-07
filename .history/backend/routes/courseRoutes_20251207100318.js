@@ -1,5 +1,6 @@
 import express from "express";
 import { protect, authorizeRoles } from "../middleware/authMiddleware.js";
+import { authMiddleware } from "../middleware/authMiddleware.js";
 import {
   createCourse,
   getCourses,
@@ -11,11 +12,12 @@ import {
   deleteLesson,
   completeLesson,
   updateCourseStatus,
+  setEstimatedDuration, // ✅ add this
 } from "../controllers/courseController.js";
 
 const router = express.Router();
 
-// ----------------- INSTRUCTOR -----------------
+// ----------------- INSTRUCTOR ----------------- //
 
 // Create course
 router.post("/", protect, authorizeRoles("instructor"), createCourse);
@@ -39,7 +41,7 @@ router.delete(
   deleteLesson
 );
 
-// ----------------- STUDENT -----------------
+// ----------------- STUDENT ----------------- //
 
 // Get student's enrolled courses
 router.get("/my-courses", protect, authorizeRoles("student"), getMyCourses);
@@ -54,7 +56,6 @@ router.post(
   authorizeRoles("student"),
   completeLesson
 );
-
 // ✅ Publish / Unpublish course
 router.put(
   "/:id/status",
@@ -62,8 +63,9 @@ router.put(
   authorizeRoles("instructor"),
   updateCourseStatus
 );
+router.put("/courses/:id/duration", authMiddleware, setEstimatedDuration);
 
-// ----------------- COMMON -----------------
+// ----------------- COMMON ----------------- //
 
 // Get all courses
 router.get("/", protect, getCourses);

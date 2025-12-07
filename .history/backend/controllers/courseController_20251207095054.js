@@ -1,12 +1,12 @@
 import Course from "../models/Course.js";
 import User from "../models/User.js";
 
-// ----------------- INSTRUCTOR -----------------
+// ----------------- INSTRUCTOR ----------------- //
 
 // Create course (instructor only)
 export const createCourse = async (req, res) => {
   try {
-    const { title, description, category, startDate, endDate } = req.body;
+    const { title, description, category } = req.body;
 
     if (!title || title.trim() === "") {
       return res.status(400).json({ message: "Course title is required" });
@@ -17,15 +17,7 @@ export const createCourse = async (req, res) => {
       description: description?.trim() || "",
       category: category?.trim() || "",
       instructor: req.user.id,
-      status: "draft", // ✅ default to draft
-      startDate: startDate || null,
-      endDate: endDate || null,
-      duration:
-        startDate && endDate
-          ? Math.ceil(
-              (new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24)
-            )
-          : null,
+      status: "draft", // ✅ NEW: default to draft
     });
 
     await newCourse.save();
@@ -43,18 +35,21 @@ export const getCourses = async (req, res) => {
     const { category, instructor } = req.query;
     let filter = {};
 
+    // ✅ Only published courses for students
     if (req.user.role === "student") {
       filter.status = "published";
     }
 
     if (category) {
-      filter.category = { $regex: category, $options: "i" };
+      filter.category = { $regex: category, $options: "i" }; // case-insensitive match
     }
 
     if (instructor) {
+      // Find instructors whose name matches
       const instructors = await User.find({
         name: { $regex: instructor, $options: "i" },
       }).select("_id");
+
       filter.instructor = { $in: instructors.map((u) => u._id) };
     }
 
@@ -78,6 +73,7 @@ export const getCourseById = async (req, res) => {
 
     if (!course) return res.status(404).json({ message: "Course not found" });
 
+    // ✅ Students cannot access draft or archived courses
     if (req.user.role === "student" && course.status !== "published") {
       return res
         .status(403)
@@ -93,10 +89,11 @@ export const getCourseById = async (req, res) => {
 // Update course
 export const updateCourse = async (req, res) => {
   try {
-    const { title, description, category, startDate, endDate } = req.body;
+    const { title, description, category } = req.body;
     const course = await Course.findById(req.params.id);
 
     if (!course) return res.status(404).json({ message: "Course not found" });
+
     if (course.instructor.toString() !== req.user.id) {
       return res.status(403).json({ message: "Not allowed" });
     }
@@ -104,20 +101,31 @@ export const updateCourse = async (req, res) => {
     course.title = title || course.title;
     course.description = description || course.description;
     course.category = category || course.category;
-    course.startDate = startDate || course.startDate;
-    course.endDate = endDate || course.endDate;
-
-    if (course.startDate && course.endDate) {
-      course.duration = Math.ceil(
-        (new Date(course.endDate) - new Date(course.startDate)) /
-          (1000 * 60 * 60 * 24)
-      );
-    }
 
     await course.save();
     res.json({ message: "Course updated successfully", course });
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+// ✅ Set Estimated Duration
+export const setEstimatedDuration = async (req, res) => {
+  try {
+    const { duration } = req.body; // e.g., "6 weeks" or "12 hours"
+    const course = await Course.findById(req.params.id);
+
+    if (!course) return res.status(404).json({ message: "Course not found" });
+
+    if (course.instructor.toString() !== req.user.id) {
+      return res.status(403).json({ message: "Not authorized" });
+    }
+
+    course.estimatedDuration = duration;
+    await course.save();
+    res.status(200).json({ message: "Duration updated", course });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 };
 
@@ -128,6 +136,7 @@ export const addLessonToCourse = async (req, res) => {
     const course = await Course.findById(req.params.id);
 
     if (!course) return res.status(404).json({ message: "Course not found" });
+
     if (course.instructor.toString() !== req.user.id) {
       return res.status(403).json({ message: "Not allowed" });
     }
@@ -145,13 +154,14 @@ export const addLessonToCourse = async (req, res) => {
   }
 };
 
-// ✅ DELETE LESSON
+// ✅ DELETE LESSON (optional but useful)
 export const deleteLesson = async (req, res) => {
   try {
     const { courseId, lessonId } = req.params;
     const course = await Course.findById(courseId);
 
     if (!course) return res.status(404).json({ message: "Course not found" });
+
     if (course.instructor.toString() !== req.user.id) {
       return res.status(403).json({ message: "Not allowed" });
     }
@@ -167,11 +177,13 @@ export const deleteLesson = async (req, res) => {
   }
 };
 
-// ----------------- STUDENT -----------------
+// ----------------- STUDENT ----------------- //
 
+// Enroll in a course
 export const enrollInCourse = async (req, res) => {
   try {
     const course = await Course.findById(req.params.id);
+
     if (!course) return res.status(404).json({ message: "Course not found" });
 
     if (!course.enrolledStudents.includes(req.user.id)) {
@@ -185,6 +197,7 @@ export const enrollInCourse = async (req, res) => {
   }
 };
 
+// Get logged-in student's courses
 export const getMyCourses = async (req, res) => {
   try {
     const courses = await Course.find({
@@ -197,6 +210,7 @@ export const getMyCourses = async (req, res) => {
   }
 };
 
+// Mark lesson as completed
 export const completeLesson = async (req, res) => {
   try {
     const { courseId, lessonId } = req.params;
@@ -205,6 +219,7 @@ export const completeLesson = async (req, res) => {
     const course = await Course.findById(courseId);
     if (!course) return res.status(404).json({ message: "Course not found" });
 
+    // Find existing student progress
     let studentProgress = course.completedLessons.find(
       (cl) => cl.student.toString() === studentId
     );
@@ -214,11 +229,13 @@ export const completeLesson = async (req, res) => {
       course.completedLessons.push(studentProgress);
     }
 
+    // Add lesson if not already completed
     if (!studentProgress.lessons.includes(lessonId)) {
       studentProgress.lessons.push(lessonId);
       await course.save();
     }
 
+    // Calculate progress %
     const progress = Math.floor(
       (studentProgress.lessons.length / course.lessons.length) * 100
     );
@@ -230,7 +247,7 @@ export const completeLesson = async (req, res) => {
   }
 };
 
-// ----------------- PUBLISH WORKFLOW -----------------
+// ----------------- PUBLISH WORKFLOW (NEW) ----------------- //
 
 export const updateCourseStatus = async (req, res) => {
   try {
@@ -238,6 +255,7 @@ export const updateCourseStatus = async (req, res) => {
     const course = await Course.findById(req.params.id);
 
     if (!course) return res.status(404).json({ message: "Course not found" });
+
     if (course.instructor.toString() !== req.user.id) {
       return res.status(403).json({ message: "Not allowed" });
     }

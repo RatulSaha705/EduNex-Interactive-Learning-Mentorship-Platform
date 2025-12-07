@@ -23,6 +23,7 @@ export default function CourseDetails() {
 
         const courseData = res.data.course;
 
+        // ✅ Only allow students to see published courses
         if (
           auth?.user?.role === "student" &&
           courseData.status !== "published"
@@ -208,6 +209,7 @@ export default function CourseDetails() {
       (studentId) => studentId.toString() === auth.user.id
     );
 
+  // Calculate progress dynamically
   let progress = 0;
   if (alreadyEnrolled) {
     const totalLessons = course.lessons?.length || 1;
@@ -232,19 +234,10 @@ export default function CourseDetails() {
         <strong>Instructor:</strong> {course.instructor?.name || "Unknown"}
       </p>
 
-      {/* Estimated Duration */}
+      {/* ✅ Estimated Duration */}
       {course.duration && (
         <p>
-          <strong>Estimated Duration:</strong> {course.duration} days
-        </p>
-      )}
-
-      {/* Start/End Dates visible for both instructors and students */}
-      {course.startDate && course.endDate && (
-        <p>
-          <strong>Course Duration:</strong>{" "}
-          {new Date(course.startDate).toLocaleDateString()} -{" "}
-          {new Date(course.endDate).toLocaleDateString()}
+          <strong>Estimated Duration:</strong> {course.duration}
         </p>
       )}
 

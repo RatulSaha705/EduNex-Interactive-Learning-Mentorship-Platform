@@ -232,19 +232,10 @@ export default function CourseDetails() {
         <strong>Instructor:</strong> {course.instructor?.name || "Unknown"}
       </p>
 
-      {/* Estimated Duration */}
+      {/* ✅ Display Estimated Duration */}
       {course.duration && (
         <p>
-          <strong>Estimated Duration:</strong> {course.duration} days
-        </p>
-      )}
-
-      {/* Start/End Dates visible for both instructors and students */}
-      {course.startDate && course.endDate && (
-        <p>
-          <strong>Course Duration:</strong>{" "}
-          {new Date(course.startDate).toLocaleDateString()} -{" "}
-          {new Date(course.endDate).toLocaleDateString()}
+          <strong>Estimated Duration:</strong> {course.duration}
         </p>
       )}
 

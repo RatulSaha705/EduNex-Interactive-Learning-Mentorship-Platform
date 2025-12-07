@@ -232,20 +232,65 @@ export default function CourseDetails() {
         <strong>Instructor:</strong> {course.instructor?.name || "Unknown"}
       </p>
 
-      {/* Estimated Duration */}
+      {/* ✅ Estimated Duration */}
       {course.duration && (
         <p>
-          <strong>Estimated Duration:</strong> {course.duration} days
+          <strong>Estimated Duration:</strong> {course.duration}
         </p>
       )}
 
-      {/* Start/End Dates visible for both instructors and students */}
-      {course.startDate && course.endDate && (
-        <p>
-          <strong>Course Duration:</strong>{" "}
-          {new Date(course.startDate).toLocaleDateString()} -{" "}
-          {new Date(course.endDate).toLocaleDateString()}
-        </p>
+      {/* ✅ Instructor Editable Course Dates */}
+      {auth?.user?.role === "instructor" ? (
+        <div className="mb-3">
+          <label>
+            <strong>Start Date:</strong>
+            <input
+              type="date"
+              className="form-control"
+              value={course.startDate ? course.startDate.split("T")[0] : ""}
+              onChange={(e) =>
+                setCourse({ ...course, startDate: e.target.value })
+              }
+            />
+          </label>
+          <label className="mt-2">
+            <strong>End Date:</strong>
+            <input
+              type="date"
+              className="form-control"
+              value={course.endDate ? course.endDate.split("T")[0] : ""}
+              onChange={(e) =>
+                setCourse({ ...course, endDate: e.target.value })
+              }
+            />
+          </label>
+          <button
+            className="btn btn-sm btn-success mt-2"
+            onClick={async () => {
+              try {
+                await axios.put(
+                  `http://localhost:5000/api/courses/${course._id}/dates`,
+                  { startDate: course.startDate, endDate: course.endDate },
+                  { headers: { Authorization: `Bearer ${auth.token}` } }
+                );
+                alert("Course dates updated successfully");
+              } catch (err) {
+                alert(err.response?.data?.message || "Failed to update dates");
+              }
+            }}
+          >
+            Save Dates
+          </button>
+        </div>
+      ) : (
+        course.startDate &&
+        course.endDate && (
+          <p>
+            <strong>Course Duration:</strong>{" "}
+            {new Date(course.startDate).toLocaleDateString()} -{" "}
+            {new Date(course.endDate).toLocaleDateString()}
+          </p>
+        )
       )}
 
       {alreadyEnrolled && (

@@ -12,9 +12,8 @@ export default function InstructorPage() {
     title: "",
     description: "",
     category: "",
-    status: "draft",
-    startDate: "",
-    endDate: "",
+    status: "draft", // ✅ New field to set initial status
+    duration: "", // ✅ New field for Estimated Duration
   });
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -74,8 +73,7 @@ export default function InstructorPage() {
         description: "",
         category: "",
         status: "draft",
-        startDate: "",
-        endDate: "",
+        duration: "",
       });
       fetchCourses();
     } catch (err) {
@@ -146,37 +144,16 @@ export default function InstructorPage() {
             onChange={(e) => setForm({ ...form, category: e.target.value })}
           />
 
-          {/* Start & End Date Pickers */}
-          <div className="mb-2">
-            <label>
-              Start Date:
-              <input
-                type="date"
-                name="startDate"
-                className="form-control"
-                value={form.startDate}
-                onChange={(e) =>
-                  setForm({ ...form, startDate: e.target.value })
-                }
-                required
-              />
-            </label>
-          </div>
-          <div className="mb-2">
-            <label>
-              End Date:
-              <input
-                type="date"
-                name="endDate"
-                className="form-control"
-                value={form.endDate}
-                onChange={(e) => setForm({ ...form, endDate: e.target.value })}
-                required
-              />
-            </label>
-          </div>
+          {/* ✅ Estimated Duration */}
+          <input
+            type="text"
+            placeholder="Estimated Duration (e.g., 6 weeks, 12 hours)"
+            className="form-control mb-2"
+            value={form.duration}
+            onChange={(e) => setForm({ ...form, duration: e.target.value })}
+          />
 
-          {/* Status */}
+          {/* ✅ Status */}
           <select
             className="form-control mb-2"
             value={form.status}
@@ -204,13 +181,8 @@ export default function InstructorPage() {
             <br />
             {course.description && <small>{course.description}</small>}
             <br />
-            {/* Display Course Dates */}
-            {course.startDate && course.endDate && (
-              <small>
-                Course Duration:{" "}
-                {new Date(course.startDate).toLocaleDateString()} -{" "}
-                {new Date(course.endDate).toLocaleDateString()}
-              </small>
+            {course.duration && (
+              <small>Estimated Duration: {course.duration}</small>
             )}
             <br />
             <small className="text-muted">

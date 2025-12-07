@@ -11,11 +11,12 @@ import {
   deleteLesson,
   completeLesson,
   updateCourseStatus,
+  setEstimatedDuration, // ✅ add this
 } from "../controllers/courseController.js";
 
 const router = express.Router();
 
-// ----------------- INSTRUCTOR -----------------
+// ----------------- INSTRUCTOR ----------------- //
 
 // Create course
 router.post("/", protect, authorizeRoles("instructor"), createCourse);
@@ -39,7 +40,7 @@ router.delete(
   deleteLesson
 );
 
-// ----------------- STUDENT -----------------
+// ----------------- STUDENT ----------------- //
 
 // Get student's enrolled courses
 router.get("/my-courses", protect, authorizeRoles("student"), getMyCourses);
@@ -54,7 +55,6 @@ router.post(
   authorizeRoles("student"),
   completeLesson
 );
-
 // ✅ Publish / Unpublish course
 router.put(
   "/:id/status",
@@ -63,7 +63,7 @@ router.put(
   updateCourseStatus
 );
 
-// ----------------- COMMON -----------------
+// ----------------- COMMON ----------------- //
 
 // Get all courses
 router.get("/", protect, getCourses);
