@@ -54,13 +54,6 @@ router.post(
   authorizeRoles("student"),
   completeLesson
 );
-// ✅ Publish / Unpublish course
-router.put(
-  "/:id/status",
-  protect,
-  authorizeRoles("instructor"),
-  updateCourseStatus
-);
 
 // ----------------- COMMON ----------------- //
 

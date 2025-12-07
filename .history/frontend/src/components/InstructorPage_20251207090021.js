@@ -12,7 +12,6 @@ export default function InstructorPage() {
     title: "",
     description: "",
     category: "",
-    status: "draft", // ✅ New field to set initial status
   });
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -67,7 +66,7 @@ export default function InstructorPage() {
       setMessage(res.data.message);
       setTimeout(() => setMessage(""), 4000);
 
-      setForm({ title: "", description: "", category: "", status: "draft" });
+      setForm({ title: "", description: "", category: "" });
       fetchCourses();
     } catch (err) {
       setError(err.response?.data?.message || "Error creating course");
@@ -89,6 +88,7 @@ export default function InstructorPage() {
     }
   };
 
+  // ✅ Toggle Publish / Draft
   const handleToggleStatus = async (course) => {
     try {
       const newStatus = course.status === "published" ? "draft" : "published";
@@ -137,16 +137,6 @@ export default function InstructorPage() {
             onChange={(e) => setForm({ ...form, category: e.target.value })}
           />
 
-          {/* ✅ New: Select Status */}
-          <select
-            className="form-control mb-2"
-            value={form.status}
-            onChange={(e) => setForm({ ...form, status: e.target.value })}
-          >
-            <option value="draft">Draft</option>
-            <option value="published">Publish</option>
-          </select>
-
           <button className="btn btn-primary">Create Course</button>
         </form>
 
@@ -169,6 +159,7 @@ export default function InstructorPage() {
               Lessons: {course.lessons?.length || 0}
             </small>
             <br />
+            {/* ✅ Status Badge */}
             <span
               className={`badge ${
                 course.status === "published" ? "bg-success" : "bg-warning"
