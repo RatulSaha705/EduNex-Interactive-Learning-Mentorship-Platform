@@ -53,7 +53,6 @@ router.post(
   "/:courseId/lessons/:lessonId/complete",
   protect,
   authorizeRoles("student"),
-  canAccessLesson,
   completeLesson
 );
 

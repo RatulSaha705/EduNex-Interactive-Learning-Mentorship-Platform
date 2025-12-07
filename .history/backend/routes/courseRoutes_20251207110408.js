@@ -53,7 +53,6 @@ router.post(
   "/:courseId/lessons/:lessonId/complete",
   protect,
   authorizeRoles("student"),
-  canAccessLesson,
   completeLesson
 );
 
@@ -63,6 +62,13 @@ router.put(
   protect,
   authorizeRoles("instructor"),
   updateCourseStatus
+);
+router.post(
+  "/:courseId/lessons/:lessonId/complete",
+  protect,
+  authorizeRoles("student"),
+  canAccessLesson, // ✅ Add this
+  completeLesson
 );
 
 // ----------------- COMMON -----------------

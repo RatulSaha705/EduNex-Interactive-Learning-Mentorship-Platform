@@ -257,37 +257,3 @@ export const updateCourseStatus = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-
-export const canAccessLesson = async (req, res, next) => {
-  try {
-    const { courseId, lessonId } = req.params;
-    const studentId = req.user.id;
-
-    const course = await Course.findById(courseId);
-    if (!course) return res.status(404).json({ message: "Course not found" });
-
-    const lessons = course.lessons;
-    const lessonIndex = lessons.findIndex((l) => l._id.toString() === lessonId);
-
-    if (lessonIndex === -1)
-      return res.status(404).json({ message: "Lesson not found" });
-
-    if (lessonIndex === 0) return next(); // First lesson always accessible
-
-    const studentProgress = course.completedLessons.find(
-      (cl) => cl.student.toString() === studentId
-    );
-
-    const prevLessonId = lessons[lessonIndex - 1]._id.toString();
-
-    if (!studentProgress?.lessons.includes(prevLessonId)) {
-      return res
-        .status(403)
-        .json({ message: "Complete previous lesson first" });
-    }
-
-    next();
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
