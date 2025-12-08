@@ -1,6 +1,7 @@
 import Course from "../models/Course.js";
 import Question from "../models/Question.js";
 import Answer from "../models/Answer.js";
+import Notification from "../models/Notification.js";
 
 // Create a new question for a specific course (student only)
 export const createQuestion = async (req, res) => {
@@ -95,7 +96,38 @@ export const createAnswer = async (req, res) => {
 
     const populatedAnswer = await answer.populate("user", "name role");
 
+    // 🔔 Notification: question owner gets alert when their question is replied
+    try {
+      // Don't notify if the same person answers their own question
+      if (question.user.toString() !== req.user._id.toString()) {
+        const course = await Course.findById(question.course).select("title");
+
+        const questionTitle = question.title || "your question";
+        const courseTitle = course ? course.title : "this course";
+        const authorName =
+          populatedAnswer?.user?.name || "Someone";
+
+        await Notification.create({
+          user: question.user, // student who asked
+          type: "question_reply",
+          title: "New reply to your question",
+          message: `${authorName} replied to "${questionTitle}" in "${courseTitle}".`,
+          link: `/student/courses/${question.course}/discussion?questionId=${question._id}`,
+          course: question.course,
+          question: question._id,
+          answer: answer._id,
+        });
+      }
+    } catch (notifyErr) {
+      console.error(
+        "Error creating notification for question reply:",
+        notifyErr
+      );
+      // Don't break the main request if notification fails
+    }
+
     res.status(201).json(populatedAnswer);
+
   } catch (error) {
     console.error("Error creating answer:", error);
     res.status(500).json({ message: error.message });
@@ -199,6 +231,9 @@ export const markAnswerHelpful = async (req, res) => {
       });
     }
 
+    // Keep old value so we know if we just marked helpful now
+    const wasMarkedBefore = answer.isMarkedHelpful;
+
     // ✅ Toggle helpful on this answer (no unmarking of others)
     answer.isMarkedHelpful = !answer.isMarkedHelpful;
     await answer.save();
@@ -216,6 +251,38 @@ export const markAnswerHelpful = async (req, res) => {
       "user",
       "name role"
     );
+
+    // 🔔 Notification: answer author gets alert when their answer is marked helpful
+    try {
+      // We only notify when changing from "not helpful" -> "helpful"
+      if (!wasMarkedBefore && answer.isMarkedHelpful) {
+        // Don't notify if they marked their own answer as helpful (just in case)
+        if (answer.user.toString() !== req.user._id.toString()) {
+          const course = await Course.findById(question.course).select(
+            "title"
+          );
+
+          const questionTitle = question.title || "this question";
+          const courseTitle = course ? course.title : "this course";
+
+          await Notification.create({
+            user: answer.user, // author of the answer
+            type: "answer_marked_helpful",
+            title: "Your answer was marked helpful",
+            message: `Your answer to "${questionTitle}" in "${courseTitle}" was marked helpful.`,
+            link: `/student/courses/${question.course}/discussion?questionId=${question._id}`,
+            course: question.course,
+            question: question._id,
+            answer: answer._id,
+          });
+        }
+      }
+    } catch (notifyErr) {
+      console.error(
+        "Error creating notification for answer marked helpful:",
+        notifyErr
+      );
+    }
 
     res.json({
       message: answer.isMarkedHelpful

@@ -3,6 +3,7 @@
 import InstructorAvailability from "../models/InstructorAvailability.js";
 import MentorshipSession from "../models/MentorshipSession.js";
 import Course from "../models/Course.js";
+import Notification from "../models/Notification.js";
 
 /* ---------- Helper functions ---------- */
 
@@ -114,7 +115,7 @@ export const upsertAvailabilityForDate = async (req, res) => {
         .json({ message: "Valid 'date' (YYYY-MM-DD) is required" });
     }
 
-    // Basic validation of time ranges
+    // Validate time ranges (start < end)
     for (const range of timeRanges) {
       if (!range.startTime || !range.endTime) {
         return res
@@ -130,6 +131,7 @@ export const upsertAvailabilityForDate = async (req, res) => {
       }
     }
 
+    // Upsert availability for this date
     const updated = await InstructorAvailability.findOneAndUpdate(
       { instructor: instructorId, date },
       {
@@ -146,19 +148,80 @@ export const upsertAvailabilityForDate = async (req, res) => {
       }
     );
 
-    // If instructor blocked this day, cancel all upcoming booked sessions for that date
+    // 🔔 If instructor blocked this day, cancel upcoming sessions and notify all enrolled students
     if (isBlocked) {
       const now = new Date();
       const dayEnd = new Date(`${date}T23:59:59.999`);
 
-      await MentorshipSession.updateMany(
-        {
+      // All *booked* sessions on that date in the future
+      const [sessions, coursesTaught] = await Promise.all([
+        MentorshipSession.find({
           instructor: instructorId,
           startTime: { $gte: now, $lte: dayEnd },
           status: "booked",
-        },
-        { $set: { status: "cancelledByInstructor" } }
+        }).populate("student course", "name title"),
+        Course.find({ instructor: instructorId }).select(
+          "title enrolledStudents"
+        ),
+      ]);
+
+      // Cancel those sessions
+      if (sessions.length > 0) {
+        await MentorshipSession.updateMany(
+          {
+            instructor: instructorId,
+            startTime: { $gte: now, $lte: dayEnd },
+            status: "booked",
+          },
+          { $set: { status: "cancelledByInstructor" } }
+        );
+      }
+
+      // All students enrolled in any of this instructor's courses
+      const allStudentIdsSet = new Set();
+      coursesTaught.forEach((course) => {
+        (course.enrolledStudents || []).forEach((sid) =>
+          allStudentIdsSet.add(String(sid))
+        );
+      });
+
+      // Students who actually had a session on that day
+      const studentsWithSessionSet = new Set(
+        sessions.map((s) =>
+          s.student?._id ? s.student._id.toString() : s.student.toString()
+        )
       );
+
+      const allStudentIds = [...allStudentIdsSet];
+
+      const instructorName = req.user?.name || "Your instructor";
+      const formattedDate = date;
+      const noteText = dayNote ? ` Note: ${dayNote}` : "";
+
+      const notifications = allStudentIds.map((studentId) => {
+        const hadSession = studentsWithSessionSet.has(studentId);
+        const extra = hadSession
+          ? " Any consultation you booked on this day has been cancelled."
+          : "";
+        return {
+          user: studentId,
+          type: "consultation_blocked",
+          title: "Consultations unavailable",
+          message: `${instructorName} is not available for consultations on ${formattedDate}.${noteText}${extra}`,
+          link: "/student/consultations",
+        };
+      });
+
+      if (notifications.length > 0) {
+        try {
+          await Notification.insertMany(notifications);
+        } catch (notifyErr) {
+          console.error(
+            "Error creating notifications for blocked consultation day:",
+            notifyErr
+          );
+        }
+      }
     }
 
     res.json(updated);
@@ -188,21 +251,79 @@ export const deleteAvailabilityDay = async (req, res) => {
       return res.status(404).json({ message: "Availability not found" });
     }
 
-    // deleted.date is the "YYYY-MM-DD" string for that day
     const date = deleted.date;
+
     if (date) {
       const now = new Date();
       const dayEnd = new Date(`${date}T23:59:59.999`);
 
-      // Cancel all still-upcoming sessions for this day
-      await MentorshipSession.updateMany(
-        {
+      // All *booked* sessions for that date
+      const [sessions, coursesTaught] = await Promise.all([
+        MentorshipSession.find({
           instructor: instructorId,
           startTime: { $gte: now, $lte: dayEnd },
           status: "booked",
-        },
-        { $set: { status: "cancelledByInstructor" } }
+        }).populate("student course", "name title"),
+        Course.find({ instructor: instructorId }).select(
+          "title enrolledStudents"
+        ),
+      ]);
+
+      // Cancel them
+      if (sessions.length > 0) {
+        await MentorshipSession.updateMany(
+          {
+            instructor: instructorId,
+            startTime: { $gte: now, $lte: dayEnd },
+            status: "booked",
+          },
+          { $set: { status: "cancelledByInstructor" } }
+        );
+      }
+
+      // All students enrolled in any of this instructor's courses
+      const allStudentIdsSet = new Set();
+      coursesTaught.forEach((course) => {
+        (course.enrolledStudents || []).forEach((sid) =>
+          allStudentIdsSet.add(String(sid))
+        );
+      });
+
+      const studentsWithSessionSet = new Set(
+        sessions.map((s) =>
+          s.student?._id ? s.student._id.toString() : s.student.toString()
+        )
       );
+
+      const allStudentIds = [...allStudentIdsSet];
+
+      const instructorName = req.user?.name || "Your instructor";
+      const formattedDate = date;
+
+      const notifications = allStudentIds.map((studentId) => {
+        const hadSession = studentsWithSessionSet.has(studentId);
+        const extra = hadSession
+          ? " Any consultation you booked on this day has been cancelled."
+          : "";
+        return {
+          user: studentId,
+          type: "consultation_blocked",
+          title: "Consultations unavailable",
+          message: `${instructorName} is not available for consultations on ${formattedDate}.${extra}`,
+          link: "/student/consultations",
+        };
+      });
+
+      if (notifications.length > 0) {
+        try {
+          await Notification.insertMany(notifications);
+        } catch (notifyErr) {
+          console.error(
+            "Error creating notifications for deleted consultation day:",
+            notifyErr
+          );
+        }
+      }
     }
 
     res.json({
@@ -386,14 +507,12 @@ export const bookSession = async (req, res) => {
         .json({ message: "date must be in YYYY-MM-DD format" });
     }
 
-    // NEW
-const duration = Number(durationMinutes);
-if (Number.isNaN(duration) || ![15, 30].includes(duration)) {
-  return res.status(400).json({
-    message: "Duration must be either 15 or 30 minutes",
-  });
-}
-
+    const duration = Number(durationMinutes);
+    if (Number.isNaN(duration) || ![15, 30].includes(duration)) {
+      return res.status(400).json({
+        message: "Duration must be either 15 or 30 minutes",
+      });
+    }
 
     const now = new Date();
     const startDateTime = combineDateAndTimeToDate(date, startTime);
@@ -418,7 +537,6 @@ if (Number.isNaN(duration) || ![15, 30].includes(duration)) {
       return res.status(404).json({ message: "Course not found" });
     }
 
-    // Ensure student is enrolled in the course
     const isEnrolled = course.enrolledStudents.some(
       (id) => id.toString() === studentId.toString()
     );
@@ -430,7 +548,6 @@ if (Number.isNaN(duration) || ![15, 30].includes(duration)) {
 
     const instructorId = course.instructor._id || course.instructor;
 
-    // Check instructor availability for this date
     const availability = await InstructorAvailability.findOne({
       instructor: instructorId,
       date,
@@ -457,7 +574,6 @@ if (Number.isNaN(duration) || ![15, 30].includes(duration)) {
       });
     }
 
-    // Check for overlap with existing sessions for this instructor
     const overlapping = await MentorshipSession.findOne({
       instructor: instructorId,
       status: "booked",
@@ -471,8 +587,6 @@ if (Number.isNaN(duration) || ![15, 30].includes(duration)) {
         .json({ message: "This time slot has already been booked" });
     }
 
-    // Create session
-    // Create session
     const session = await MentorshipSession.create({
       instructor: instructorId,
       student: studentId,
@@ -483,15 +597,36 @@ if (Number.isNaN(duration) || ![15, 30].includes(duration)) {
       studentNote: studentNote || "",
     });
 
-    // Proper populate on the created document
     await session.populate([
       { path: "instructor", select: "name email" },
       { path: "student", select: "name email" },
       { path: "course", select: "title" },
     ]);
 
-    res.status(201).json(session);
+    // 🔔 Notification: instructor gets alert when a student books a session
+    try {
+      const instructorUserId =
+        session.instructor?._id || session.instructor;
+      const studentName = session.student?.name || "A student";
+      const courseTitle = session.course?.title || "a course";
+      const startStr = session.startTime.toLocaleString();
 
+      await Notification.create({
+        user: instructorUserId,
+        type: "consultation_booked",
+        title: "New consultation booked",
+        message: `${studentName} booked a ${session.durationMinutes}-minute consultation on ${startStr} for "${courseTitle}".`,
+        link: "/instructor/consultations/today",
+        course: session.course?._id || session.course,
+      });
+    } catch (notifyErr) {
+      console.error(
+        "Error creating notification for booked session:",
+        notifyErr
+      );
+    }
+
+    res.status(201).json(session);
   } catch (error) {
     console.error("Error in bookSession:", error);
     res.status(500).json({ message: "Server error booking session" });

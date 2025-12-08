@@ -1,6 +1,6 @@
 import Course from "../models/Course.js";
 import User from "../models/User.js";
-
+import Notification from "../models/Notification.js";
 // ----------------- INSTRUCTOR ----------------- //
 
 // Create course (instructor only)
@@ -115,7 +115,31 @@ export const addLessonToCourse = async (req, res) => {
     });
 
     await course.save();
+
+    // 🔔 Notification: all enrolled students get alert about the new lesson
+    try {
+      if (course.enrolledStudents && course.enrolledStudents.length > 0) {
+        const notifications = course.enrolledStudents.map((studentId) => ({
+          user: studentId,
+          type: "lesson_added",
+          title: `New lesson in ${course.title}`,
+          message: `Lesson "${title}" has been added by ${req.user.name} in "${course.title}".`,
+          link: `/student/courses/${course._id}`,
+          course: course._id,
+        }));
+
+        await Notification.insertMany(notifications);
+      }
+    } catch (notifyErr) {
+      console.error(
+        "Error creating notifications for new lesson:",
+        notifyErr
+      );
+      // don't block main response if notifications fail
+    }
+
     res.json({ message: "Lesson added successfully", course });
+
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
