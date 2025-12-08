@@ -52,15 +52,9 @@ const mentorshipSessionSchema = new Schema(
     durationMinutes: {
       type: Number,
       required: true,
-      min: 10,
-      max: 30,
-      validate: {
-        validator: function (v) {
-          return v % 5 === 0;
-        },
-        message: "durationMinutes must be a multiple of 5",
-      },
+      enum: [15, 30],
     },
+    
 
     /**
      * Current status of the session.

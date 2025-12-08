@@ -21,9 +21,8 @@ const minutesToTimeString = (minutes) => {
 };
 
 const combineDateAndTimeToDate = (dateStr, timeStr) => {
-  // Stores everything in UTC to keep things consistent
-  // Example: "2025-12-08", "10:30" -> Date("2025-12-08T10:30:00.000Z")
-  return new Date(`${dateStr}T${timeStr}:00.000Z`);
+  // interpret date + time in server's local timezone (no trailing Z)
+  return new Date(`${dateStr}T${timeStr}:00`);
 };
 
 const isValidYyyyMmDd = (dateStr) =>
@@ -42,7 +41,7 @@ const addSlotsFromInterval = (
   slotsArray,
   now
 ) => {
-  const MIN_DURATION = 10; // minutes
+  const MIN_DURATION = 15; // minutes
   const MAX_DURATION = 30; // minutes
 
   for (let t = intervalStartMinutes; t + MIN_DURATION <= intervalEndMinutes; t += 5) {
@@ -147,12 +146,29 @@ export const upsertAvailabilityForDate = async (req, res) => {
       }
     );
 
+    // If instructor blocked this day, cancel all upcoming booked sessions for that date
+    if (isBlocked) {
+      const now = new Date();
+      const dayEnd = new Date(`${date}T23:59:59.999`);
+
+      await MentorshipSession.updateMany(
+        {
+          instructor: instructorId,
+          startTime: { $gte: now, $lte: dayEnd },
+          status: "booked",
+        },
+        { $set: { status: "cancelledByInstructor" } }
+      );
+    }
+
     res.json(updated);
   } catch (error) {
     console.error("Error in upsertAvailabilityForDate:", error);
     res.status(500).json({ message: "Server error updating availability" });
   }
 };
+
+
 
 /**
  * DELETE /api/mentorship/availability/:id
@@ -172,12 +188,33 @@ export const deleteAvailabilityDay = async (req, res) => {
       return res.status(404).json({ message: "Availability not found" });
     }
 
-    res.json({ message: "Availability deleted successfully" });
+    // deleted.date is the "YYYY-MM-DD" string for that day
+    const date = deleted.date;
+    if (date) {
+      const now = new Date();
+      const dayEnd = new Date(`${date}T23:59:59.999`);
+
+      // Cancel all still-upcoming sessions for this day
+      await MentorshipSession.updateMany(
+        {
+          instructor: instructorId,
+          startTime: { $gte: now, $lte: dayEnd },
+          status: "booked",
+        },
+        { $set: { status: "cancelledByInstructor" } }
+      );
+    }
+
+    res.json({
+      message:
+        "Availability deleted and upcoming sessions for this day were cancelled",
+    });
   } catch (error) {
     console.error("Error in deleteAvailabilityDay:", error);
     res.status(500).json({ message: "Server error deleting availability" });
   }
 };
+
 
 /* ---------- Student: view free slots & book ---------- */
 
@@ -248,8 +285,8 @@ export const getAvailableSlotsForCourse = async (req, res) => {
     }
 
     // Get already-booked sessions for this instructor on this date
-    const dayStart = new Date(`${date}T00:00:00.000Z`);
-    const dayEnd = new Date(`${date}T23:59:59.999Z`);
+    const dayStart = new Date(`${date}T00:00:00`);
+    const dayEnd = new Date(`${date}T23:59:59.999`);
 
     const bookedSessions = await MentorshipSession.find({
       instructor: instructorId,
@@ -259,10 +296,11 @@ export const getAvailableSlotsForCourse = async (req, res) => {
 
     const bookedIntervals = bookedSessions.map((s) => {
       const start =
-        s.startTime.getUTCHours() * 60 + s.startTime.getUTCMinutes();
-      const end = s.endTime.getUTCHours() * 60 + s.endTime.getUTCMinutes();
+        s.startTime.getHours() * 60 + s.startTime.getMinutes();
+      const end = s.endTime.getHours() * 60 + s.endTime.getMinutes();
       return [start, end];
     });
+    
 
     const now = new Date();
     const slots = [];
@@ -348,18 +386,14 @@ export const bookSession = async (req, res) => {
         .json({ message: "date must be in YYYY-MM-DD format" });
     }
 
-    const duration = Number(durationMinutes);
-    if (
-      Number.isNaN(duration) ||
-      duration < 10 ||
-      duration > 30 ||
-      duration % 5 !== 0
-    ) {
-      return res.status(400).json({
-        message:
-          "durationMinutes must be a number between 10 and 30 and a multiple of 5",
-      });
-    }
+    // NEW
+const duration = Number(durationMinutes);
+if (Number.isNaN(duration) || ![15, 30].includes(duration)) {
+  return res.status(400).json({
+    message: "Duration must be either 15 or 30 minutes",
+  });
+}
+
 
     const now = new Date();
     const startDateTime = combineDateAndTimeToDate(date, startTime);
@@ -438,6 +472,7 @@ export const bookSession = async (req, res) => {
     }
 
     // Create session
+    // Create session
     const session = await MentorshipSession.create({
       instructor: instructorId,
       student: studentId,
@@ -448,12 +483,15 @@ export const bookSession = async (req, res) => {
       studentNote: studentNote || "",
     });
 
-    const populated = await session
-      .populate({ path: "instructor", select: "name email" })
-      .populate({ path: "student", select: "name email" })
-      .populate({ path: "course", select: "title" });
+    // Proper populate on the created document
+    await session.populate([
+      { path: "instructor", select: "name email" },
+      { path: "student", select: "name email" },
+      { path: "course", select: "title" },
+    ]);
 
-    res.status(201).json(populated);
+    res.status(201).json(session);
+
   } catch (error) {
     console.error("Error in bookSession:", error);
     res.status(500).json({ message: "Server error booking session" });

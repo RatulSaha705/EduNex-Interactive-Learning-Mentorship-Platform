@@ -241,19 +241,30 @@ export default function CourseDetails() {
         </div>
       )}
 
-      {auth?.user?.role === "student" && (
-        <>
+        {auth.user?.role === "student" && (
+        <div className="mb-3">
           {!alreadyEnrolled ? (
-            <button className="btn btn-primary" onClick={handleEnroll}>
+            <button className="btn btn-primary me-2" onClick={handleEnroll}>
               Enroll
             </button>
           ) : (
-            <button className="btn btn-secondary" disabled>
+            <button className="btn btn-secondary me-2" disabled>
               Already Enrolled
             </button>
           )}
-        </>
+
+            {alreadyEnrolled && (
+              <Link
+                to={`/student/courses/${id}/consultation`}
+                className="btn btn-info"
+              >
+                Book Consultation
+              </Link>
+            )}
+
+        </div>
       )}
+
 
         <div className="mt-3">
         <Link

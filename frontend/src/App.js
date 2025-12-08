@@ -27,6 +27,11 @@ import CourseDiscussion from "./pages/CourseDiscussion";
 import AddLesson from "./pages/AddLesson";
 import CourseList from "./pages/CourseList";
 import InstructorCourseDetails from "./pages/InstructorCourseDetails";
+import StudentMyConsultations from "./pages/StudentMyConsultations";
+import StudentConsultationBooking from "./pages/StudentConsultationBooking";
+import InstructorConsultationSchedule from "./pages/InstructorConsultationSchedule";
+import InstructorTodayConsultations from "./pages/InstructorTodayConsultations";
+
 
 function App() {
   const { auth, logout } = useContext(AuthContext);
@@ -75,6 +80,30 @@ function App() {
 
         <Route path="/student/courses/:id" element={<CourseDetails />} />
         <Route path="/student/my-courses" element={<MyCourses />} />
+        
+        <Route
+          path="/student/consultations"
+          element={
+            auth.user?.role === "student" ? (
+              <StudentMyConsultations />
+            ) : (
+              <Navigate to="/" />
+            )
+          }
+        />
+
+        <Route
+          path="/student/courses/:id/consultation"
+          element={
+            auth.user?.role === "student" ? (
+              <StudentConsultationBooking />
+            ) : (
+              <Navigate to="/" />
+            )
+          }
+        />
+
+
 
         <Route
           path="/instructor"
@@ -96,6 +125,30 @@ function App() {
             )
           }
         />
+
+<Route
+          path="/instructor/consultations/schedule"
+          element={
+            auth.user?.role === "instructor" ? (
+              <InstructorConsultationSchedule />
+            ) : (
+              <Navigate to="/" />
+            )
+          }
+        />
+
+        <Route
+          path="/instructor/consultations/today"
+          element={
+            auth.user?.role === "instructor" ? (
+              <InstructorTodayConsultations />
+            ) : (
+              <Navigate to="/" />
+            )
+          }
+        />
+
+
         <Route
           path="/admin"
           element={
@@ -174,16 +227,33 @@ function Navigation({ auth, logout }) {
           </Link>
 
           {/* Role-based Links */}
-          {auth.user.role === "student" && (
+            {auth.user.role === "student" && (
             <Link to="/student" className="btn btn-warning me-2">
               Student Dashboard
             </Link>
           )}
+
+
           {auth.user.role === "instructor" && (
-            <Link to="/instructor" className="btn btn-warning me-2">
-              Instructor Dashboard
-            </Link>
+            <>
+              <Link to="/instructor" className="btn btn-warning me-2">
+                Instructor Dashboard
+              </Link>
+              <Link
+                to="/instructor/consultations/schedule"
+                className="btn btn-primary me-2"
+              >
+                Manage Consultations
+              </Link>
+              <Link
+                to="/instructor/consultations/today"
+                className="btn btn-success me-2"
+              >
+                Today&apos;s Consultations
+              </Link>
+            </>
           )}
+
           {auth.user.role === "admin" && (
             <Link to="/admin" className="btn btn-danger me-2">
               Admin Dashboard
