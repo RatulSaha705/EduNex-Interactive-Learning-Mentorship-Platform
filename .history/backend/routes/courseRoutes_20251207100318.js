@@ -1,5 +1,6 @@
 import express from "express";
 import { protect, authorizeRoles } from "../middleware/authMiddleware.js";
+import { authMiddleware } from "../middleware/authMiddleware.js";
 import {
   createCourse,
   getCourses,
@@ -11,15 +12,12 @@ import {
   deleteLesson,
   completeLesson,
   updateCourseStatus,
-  canAccessLesson,
-  // ✅ Announcement controllers
-  addAnnouncement,
-  getAnnouncements,
+  setEstimatedDuration, // ✅ add this
 } from "../controllers/courseController.js";
 
 const router = express.Router();
 
-// ----------------- INSTRUCTOR -----------------
+// ----------------- INSTRUCTOR ----------------- //
 
 // Create course
 router.post("/", protect, authorizeRoles("instructor"), createCourse);
@@ -43,15 +41,7 @@ router.delete(
   deleteLesson
 );
 
-// ✅ Add announcement
-router.post(
-  "/:id/announcements",
-  protect,
-  authorizeRoles("instructor"),
-  addAnnouncement
-);
-
-// ----------------- STUDENT -----------------
+// ----------------- STUDENT ----------------- //
 
 // Get student's enrolled courses
 router.get("/my-courses", protect, authorizeRoles("student"), getMyCourses);
@@ -64,18 +54,8 @@ router.post(
   "/:courseId/lessons/:lessonId/complete",
   protect,
   authorizeRoles("student"),
-  canAccessLesson,
   completeLesson
 );
-
-// ✅ Get course announcements (students view)
-router.get(
-  "/:id/announcements",
-  protect,
-  authorizeRoles("student"),
-  getAnnouncements
-);
-
 // ✅ Publish / Unpublish course
 router.put(
   "/:id/status",
@@ -83,8 +63,9 @@ router.put(
   authorizeRoles("instructor"),
   updateCourseStatus
 );
+router.put("/courses/:id/duration", authMiddleware, setEstimatedDuration);
 
-// ----------------- COMMON -----------------
+// ----------------- COMMON ----------------- //
 
 // Get all courses
 router.get("/", protect, getCourses);

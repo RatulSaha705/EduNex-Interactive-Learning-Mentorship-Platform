@@ -11,10 +11,6 @@ import {
   deleteLesson,
   completeLesson,
   updateCourseStatus,
-  canAccessLesson,
-  // ✅ Announcement controllers
-  addAnnouncement,
-  getAnnouncements,
 } from "../controllers/courseController.js";
 
 const router = express.Router();
@@ -43,14 +39,6 @@ router.delete(
   deleteLesson
 );
 
-// ✅ Add announcement
-router.post(
-  "/:id/announcements",
-  protect,
-  authorizeRoles("instructor"),
-  addAnnouncement
-);
-
 // ----------------- STUDENT -----------------
 
 // Get student's enrolled courses
@@ -64,16 +52,7 @@ router.post(
   "/:courseId/lessons/:lessonId/complete",
   protect,
   authorizeRoles("student"),
-  canAccessLesson,
   completeLesson
-);
-
-// ✅ Get course announcements (students view)
-router.get(
-  "/:id/announcements",
-  protect,
-  authorizeRoles("student"),
-  getAnnouncements
 );
 
 // ✅ Publish / Unpublish course

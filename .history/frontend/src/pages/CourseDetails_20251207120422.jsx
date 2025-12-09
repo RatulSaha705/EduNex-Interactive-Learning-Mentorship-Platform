@@ -1,5 +1,5 @@
 import { useEffect, useState, useContext } from "react";
-import { useParams,Link } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import axios from "axios";
 import { AuthContext } from "../context/AuthContext";
 
@@ -17,12 +17,10 @@ export default function CourseDetails() {
 
   // Fetch course details
   useEffect(() => {
-    if (!auth?.token) return;
-
     const fetchCourse = async () => {
       try {
         const res = await axios.get(`http://localhost:5000/api/courses/${id}`, {
-          headers: { Authorization: `Bearer ${auth.token}` },
+          headers: { Authorization: `Bearer ${auth?.token}` },
         });
 
         const courseData = res.data.course;
@@ -43,7 +41,7 @@ export default function CourseDetails() {
       }
     };
 
-    fetchCourse();
+    if (auth?.token) fetchCourse();
   }, [id, auth?.token, auth?.user?.role]);
 
   useEffect(() => {
@@ -228,14 +226,14 @@ export default function CourseDetails() {
   };
 
   if (loading) return <p>Loading course...</p>;
-  if (!auth?.user) return <p>Please login to view course details</p>;
   if (error) return <p className="text-danger">{error}</p>;
   if (!course) return <p>Course not found</p>;
 
   const alreadyEnrolled =
+    auth?.user &&
     course.enrolledStudents?.some(
       (studentId) => studentId.toString() === auth.user.id
-    ) || false;
+    );
 
   let progress = 0;
   if (alreadyEnrolled) {
@@ -261,56 +259,19 @@ export default function CourseDetails() {
     <div className="container mt-4">
       <h2>{course.title}</h2>
       <p>{course.description}</p>
-
-      {/* Course Info visible for all roles */}
       <p>
         <strong>Category:</strong> {course.category || "N/A"}
       </p>
       <p>
         <strong>Instructor:</strong> {course.instructor?.name || "Unknown"}
       </p>
-      <p>
-        <strong>Duration:</strong>{" "}
-        {course.startDate && course.endDate
-          ? `${new Date(course.startDate).toLocaleDateString()} - ${new Date(
-              course.endDate
-            ).toLocaleDateString()}`
-          : "N/A"}
-      </p>
-      <hr />
-      <h4>Important Dates</h4>
 
-      {course.endDate ? (
-        <div className="border rounded p-3 mb-3">
-          <p className="text-muted mb-1">
-            {new Date(course.endDate).toLocaleDateString("en-US", {
-              weekday: "short",
-              year: "numeric",
-              month: "short",
-              day: "numeric",
-            })}
-          </p>
-
-          <h6 className="mb-1">Course ends</h6>
-
-          <p className="mb-0 text-secondary">
-            After the course ends, the course content will be archived and no
-            longer active.
-          </p>
-        </div>
-      ) : (
-        <p>No important dates available.</p>
-      )}
-
-      <p>
-        <strong>Total Lessons:</strong> {course.lessons?.length || 0}
-      </p>
-
-      {/* Progress Bar */}
+      {/* Enrolled Student Progress */}
       {alreadyEnrolled && (
-        <div className="mb-3">
-          <h5>Course Progress: {progress}%</h5>
-          <div className="progress">
+        <>
+          <hr />
+          <h5>Course Progress</h5>
+          <div className="progress mb-3">
             <div
               className="progress-bar"
               role="progressbar"
@@ -318,46 +279,13 @@ export default function CourseDetails() {
               aria-valuenow={progress}
               aria-valuemin="0"
               aria-valuemax="100"
-            ></div>
+            >
+              {progress}%
+            </div>
           </div>
-        </div>
+        </>
       )}
 
-        {auth.user?.role === "student" && (
-        <div className="mb-3">
-          {!alreadyEnrolled ? (
-            <button className="btn btn-primary me-2" onClick={handleEnroll}>
-              Enroll
-            </button>
-          ) : (
-            <button className="btn btn-secondary me-2" disabled>
-              Already Enrolled
-            </button>
-          )}
-
-            {alreadyEnrolled && (
-              <Link
-                to={`/student/courses/${id}/consultation`}
-                className="btn btn-info"
-              >
-                Book Consultation
-              </Link>
-            )}
-
-        </div>
-      )}
-
-
-        <div className="mt-3">
-        <Link
-          to={`/student/courses/${id}/discussion`}
-          className="btn btn-info"
-        >
-          Go to Discussion Board
-        </Link>
-      </div>
-
-      {enrollMsg && <p className="mt-2">{enrollMsg}</p>}
       {/* Announcements Panel */}
       <hr />
       <h4>Announcements</h4>
@@ -392,6 +320,7 @@ export default function CourseDetails() {
         ))}
       </ul>
 
+      {/* Lessons */}
       {alreadyEnrolled && (
         <>
           <hr />
@@ -447,13 +376,19 @@ export default function CourseDetails() {
         </>
       )}
 
-      {/* Enroll button only for students who are not enrolled */}
-      {auth?.user?.role === "student" && !alreadyEnrolled && (
-        <button className="btn btn-primary" onClick={handleEnroll}>
-          Enroll
-        </button>
+      {auth?.user?.role === "student" && (
+        <>
+          {!alreadyEnrolled ? (
+            <button className="btn btn-primary" onClick={handleEnroll}>
+              Enroll
+            </button>
+          ) : (
+            <button className="btn btn-secondary" disabled>
+              Already Enrolled
+            </button>
+          )}
+        </>
       )}
-
       {enrollMsg && <p className="mt-2">{enrollMsg}</p>}
     </div>
   );

@@ -53,15 +53,8 @@ export default function StudentPage() {
           View All Courses
         </Link>
 
-        <Link to="/student/my-courses" className="btn btn-success me-2">
+        <Link to="/student/my-courses" className="btn btn-success">
           My Courses
-        </Link>
-
-        <Link
-          to="/student/consultations"
-          className="btn btn-info"
-        >
-          My Consultations
         </Link>
       </div>
 
@@ -87,4 +80,3 @@ export default function StudentPage() {
     </div>
   );
 }
-

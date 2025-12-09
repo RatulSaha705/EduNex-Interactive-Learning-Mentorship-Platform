@@ -11,8 +11,6 @@ export default function EditCourse() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
-  const [startDate, setStartDate] = useState(""); // ✅ new start date
-  const [endDate, setEndDate] = useState(""); // ✅ new end date
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -25,8 +23,6 @@ export default function EditCourse() {
         setTitle(res.data.course.title);
         setDescription(res.data.course.description);
         setCategory(res.data.course.category);
-        setStartDate(res.data.course.startDate?.split("T")[0] || ""); // format for input type="date"
-        setEndDate(res.data.course.endDate?.split("T")[0] || "");
       } catch (err) {
         console.error(err);
         setError("Failed to load course");
@@ -43,12 +39,13 @@ export default function EditCourse() {
     try {
       await axios.put(
         `http://localhost:5000/api/courses/${id}`,
-        { title, description, category, startDate, endDate }, // ✅ send date range
+        { title, description, category },
         {
           headers: { Authorization: `Bearer ${auth.token}` },
         }
       );
 
+      // Pass success message back to InstructorPage
       navigate("/instructor", {
         state: { successMsg: "Course updated successfully" },
       });
@@ -86,28 +83,6 @@ export default function EditCourse() {
           value={category}
           onChange={(e) => setCategory(e.target.value)}
         />
-
-        {/* ✅ Date range picker */}
-        <div className="mb-2 d-flex gap-2">
-          <div>
-            <label>Start Date</label>
-            <input
-              type="date"
-              className="form-control"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-            />
-          </div>
-          <div>
-            <label>End Date</label>
-            <input
-              type="date"
-              className="form-control"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-            />
-          </div>
-        </div>
 
         <button className="btn btn-primary">Update Course</button>
       </form>

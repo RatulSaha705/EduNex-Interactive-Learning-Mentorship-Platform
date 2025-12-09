@@ -13,16 +13,6 @@ const lessonSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-const announcementSchema = new mongoose.Schema(
-  {
-    title: { type: String, required: true },
-    content: { type: String, required: true },
-    createdAt: { type: Date, default: Date.now },
-    isNew: { type: Boolean, default: true }, // highlights new announcements
-  },
-  { _id: false } // optional, prevents creating separate _id for each announcement
-);
-
 const courseSchema = new mongoose.Schema(
   {
     title: { type: String, required: true },
@@ -58,9 +48,6 @@ const courseSchema = new mongoose.Schema(
     // ✅ NEW: Course date range
     startDate: { type: Date },
     endDate: { type: Date },
-
-    // ✅ NEW: Course Announcements
-    announcements: [announcementSchema],
   },
   { timestamps: true }
 );

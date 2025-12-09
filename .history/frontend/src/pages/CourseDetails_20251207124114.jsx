@@ -1,5 +1,5 @@
 import { useEffect, useState, useContext } from "react";
-import { useParams,Link } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import axios from "axios";
 import { AuthContext } from "../context/AuthContext";
 
@@ -270,38 +270,18 @@ export default function CourseDetails() {
         <strong>Instructor:</strong> {course.instructor?.name || "Unknown"}
       </p>
       <p>
-        <strong>Duration:</strong>{" "}
-        {course.startDate && course.endDate
-          ? `${new Date(course.startDate).toLocaleDateString()} - ${new Date(
-              course.endDate
-            ).toLocaleDateString()}`
+        <strong>Duration:</strong> {course.duration || "N/A"}
+      </p>
+      <p>
+        <strong>Start Date:</strong>{" "}
+        {course.startDate
+          ? new Date(course.startDate).toLocaleDateString()
           : "N/A"}
       </p>
-      <hr />
-      <h4>Important Dates</h4>
-
-      {course.endDate ? (
-        <div className="border rounded p-3 mb-3">
-          <p className="text-muted mb-1">
-            {new Date(course.endDate).toLocaleDateString("en-US", {
-              weekday: "short",
-              year: "numeric",
-              month: "short",
-              day: "numeric",
-            })}
-          </p>
-
-          <h6 className="mb-1">Course ends</h6>
-
-          <p className="mb-0 text-secondary">
-            After the course ends, the course content will be archived and no
-            longer active.
-          </p>
-        </div>
-      ) : (
-        <p>No important dates available.</p>
-      )}
-
+      <p>
+        <strong>End Date:</strong>{" "}
+        {course.endDate ? new Date(course.endDate).toLocaleDateString() : "N/A"}
+      </p>
       <p>
         <strong>Total Lessons:</strong> {course.lessons?.length || 0}
       </p>
@@ -323,41 +303,6 @@ export default function CourseDetails() {
         </div>
       )}
 
-        {auth.user?.role === "student" && (
-        <div className="mb-3">
-          {!alreadyEnrolled ? (
-            <button className="btn btn-primary me-2" onClick={handleEnroll}>
-              Enroll
-            </button>
-          ) : (
-            <button className="btn btn-secondary me-2" disabled>
-              Already Enrolled
-            </button>
-          )}
-
-            {alreadyEnrolled && (
-              <Link
-                to={`/student/courses/${id}/consultation`}
-                className="btn btn-info"
-              >
-                Book Consultation
-              </Link>
-            )}
-
-        </div>
-      )}
-
-
-        <div className="mt-3">
-        <Link
-          to={`/student/courses/${id}/discussion`}
-          className="btn btn-info"
-        >
-          Go to Discussion Board
-        </Link>
-      </div>
-
-      {enrollMsg && <p className="mt-2">{enrollMsg}</p>}
       {/* Announcements Panel */}
       <hr />
       <h4>Announcements</h4>

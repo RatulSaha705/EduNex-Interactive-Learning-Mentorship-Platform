@@ -1,7 +1,5 @@
 import Course from "../models/Course.js";
 import User from "../models/User.js";
-import Notification from "../models/Notification.js";
-// ----------------- INSTRUCTOR ----------------- //
 
 // ----------------- INSTRUCTOR -----------------
 
@@ -141,31 +139,7 @@ export const addLessonToCourse = async (req, res) => {
     });
 
     await course.save();
-
-    // 🔔 Notification: all enrolled students get alert about the new lesson
-    try {
-      if (course.enrolledStudents && course.enrolledStudents.length > 0) {
-        const notifications = course.enrolledStudents.map((studentId) => ({
-          user: studentId,
-          type: "lesson_added",
-          title: `New lesson in ${course.title}`,
-          message: `Lesson "${title}" has been added by ${req.user.name} in "${course.title}".`,
-          link: `/student/courses/${course._id}`,
-          course: course._id,
-        }));
-
-        await Notification.insertMany(notifications);
-      }
-    } catch (notifyErr) {
-      console.error(
-        "Error creating notifications for new lesson:",
-        notifyErr
-      );
-      // don't block main response if notifications fail
-    }
-
     res.json({ message: "Lesson added successfully", course });
-
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -197,49 +171,12 @@ export const deleteLesson = async (req, res) => {
 
 export const enrollInCourse = async (req, res) => {
   try {
-    // populate instructor so we can notify them
-    const course = await Course.findById(req.params.id).populate(
-      "instructor",
-      "name email"
-    );
-
-    if (!course) {
-      return res.status(404).json({ message: "Course not found" });
-    }
-
-    let newlyEnrolled = false;
     const course = await Course.findById(req.params.id);
     if (!course) return res.status(404).json({ message: "Course not found" });
 
     if (!course.enrolledStudents.includes(req.user.id)) {
       course.enrolledStudents.push(req.user.id);
-      newlyEnrolled = true;
       await course.save();
-    }
-
-    // 🔔 Notify instructor only when this is a NEW enrollment
-    if (newlyEnrolled) {
-      try {
-        const instructorUserId =
-          course.instructor?._id || course.instructor;
-        const courseTitle = course.title || "your course";
-        const studentName = req.user?.name || "A student";
-
-        await Notification.create({
-          user: instructorUserId, // instructor gets this
-          type: "student_enrolled",
-          title: "New course enrollment",
-          message: `${studentName} enrolled in your course "${courseTitle}".`,
-          link: `/instructor/courses/${course._id}`,
-          course: course._id,
-        });
-      } catch (notifyErr) {
-        console.error(
-          "Error creating notification for enrollment:",
-          notifyErr
-        );
-        // don't block enrollment if notification fails
-      }
     }
 
     res.json({ message: "Enrolled successfully", course });
@@ -248,8 +185,6 @@ export const enrollInCourse = async (req, res) => {
   }
 };
 
-
-// Get logged-in student's courses
 export const getMyCourses = async (req, res) => {
   try {
     const courses = await Course.find({
@@ -354,61 +289,5 @@ export const canAccessLesson = async (req, res, next) => {
     next();
   } catch (error) {
     res.status(500).json({ message: error.message });
-  }
-};
-
-// ----------------- ANNOUNCEMENTS -----------------
-
-// Add announcement (Instructor Only)
-export const addAnnouncement = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { title, content } = req.body;
-
-    if (!content || content.trim() === "") {
-      return res.status(400).json({ message: "Content is required" });
-    }
-
-    const course = await Course.findById(id);
-    if (!course) return res.status(404).json({ message: "Course not found" });
-
-    if (course.instructor.toString() !== req.user.id) {
-      return res.status(403).json({ message: "Not allowed" });
-    }
-
-    // Set default title if missing
-    const newAnnouncement = {
-      title: title?.trim() || "Announcement",
-      content: content.trim(),
-      createdAt: new Date(),
-    };
-
-    // Initialize announcements array if undefined
-    course.announcements = course.announcements || [];
-    course.announcements.push(newAnnouncement);
-
-    await course.save();
-
-    res.status(201).json({
-      message: "Announcement added",
-      announcements: course.announcements,
-      announcement: newAnnouncement,
-    });
-  } catch (error) {
-    console.error("Add announcement error:", error);
-    res.status(500).json({ message: "Failed to add announcement" });
-  }
-};
-
-// Get announcements (Student & Instructor)
-export const getAnnouncements = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const course = await Course.findById(id);
-    if (!course) return res.status(404).json({ message: "Course not found" });
-
-    res.status(200).json({ announcements: course.announcements || [] });
-  } catch (error) {
-    res.status(500).json({ message: "Failed to get announcements" });
   }
 };

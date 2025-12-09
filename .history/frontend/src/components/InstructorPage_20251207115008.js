@@ -267,12 +267,9 @@ export default function InstructorPage() {
                 />
                 <button
                   className="btn btn-primary"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    handleAddAnnouncement(course._id);
-                  }}
+                  onClick={() => handleAddAnnouncement(course._id)}
                 >
-                  POST
+                  Add
                 </button>
               </div>
               {(!course.announcements || course.announcements.length === 0) && (
@@ -300,21 +297,12 @@ export default function InstructorPage() {
                 Edit
               </Link>
 
-
-
               <Link
                 to={`/instructor/courses/${course._id}`}
                 className="btn btn-sm btn-primary me-2"
               >
                 Manage Lessons
               </Link>
-
-              <Link
-                  to={`/instructor/courses/${course._id}/discussion`}
-                  className="btn btn-sm btn-warning me-2"
-                >
-                  Discussion Board
-                </Link>
 
               <button
                 className="btn btn-sm btn-secondary me-2"

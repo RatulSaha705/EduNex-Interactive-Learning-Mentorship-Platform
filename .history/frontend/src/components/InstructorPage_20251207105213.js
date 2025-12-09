@@ -18,7 +18,6 @@ export default function InstructorPage() {
   });
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [announcementInputs, setAnnouncementInputs] = useState({}); // per course input
 
   useEffect(() => {
     if (location.state?.successMsg) {
@@ -35,6 +34,7 @@ export default function InstructorPage() {
       const res = await axios.get("http://localhost:5000/api/courses", {
         headers: { Authorization: `Bearer ${auth.token}` },
       });
+
       const myCourses = res.data.courses.filter(
         (c) => c.instructor._id === auth.user.id
       );
@@ -114,38 +114,6 @@ export default function InstructorPage() {
     }
   };
 
-  const handleAddAnnouncement = async (courseId) => {
-    const content = announcementInputs[courseId]?.trim();
-    if (!content) return;
-
-    try {
-      const res = await axios.post(
-        `http://localhost:5000/api/courses/${courseId}/announcements`,
-        { content },
-        { headers: { Authorization: `Bearer ${auth.token}` } }
-      );
-
-      setCourses((prev) =>
-        prev.map((c) =>
-          c._id === courseId
-            ? { ...c, announcements: res.data.announcements }
-            : c
-        )
-      );
-
-      setAnnouncementInputs((prev) => ({ ...prev, [courseId]: "" }));
-    } catch (err) {
-      console.log(err.response?.data?.message || "Failed to add announcement");
-    }
-  };
-
-  const isNew = (date) => {
-    const created = new Date(date);
-    const now = new Date();
-    const diffDays = (now - created) / (1000 * 60 * 60 * 24);
-    return diffDays <= 3;
-  };
-
   return (
     <div className="container mt-4">
       <h3>Instructor Dashboard</h3>
@@ -153,6 +121,7 @@ export default function InstructorPage() {
       {/* Create Course */}
       <div className="card p-3 mb-4">
         <h5>Create New Course</h5>
+
         <form onSubmit={handleSubmit}>
           <input
             type="text"
@@ -176,6 +145,8 @@ export default function InstructorPage() {
             value={form.category}
             onChange={(e) => setForm({ ...form, category: e.target.value })}
           />
+
+          {/* Start & End Date Pickers */}
           <div className="mb-2">
             <label>
               Start Date:
@@ -204,6 +175,8 @@ export default function InstructorPage() {
               />
             </label>
           </div>
+
+          {/* Status */}
           <select
             className="form-control mb-2"
             value={form.status}
@@ -212,6 +185,7 @@ export default function InstructorPage() {
             <option value="draft">Draft</option>
             <option value="published">Publish</option>
           </select>
+
           <button className="btn btn-primary">Create Course</button>
         </form>
 
@@ -230,6 +204,7 @@ export default function InstructorPage() {
             <br />
             {course.description && <small>{course.description}</small>}
             <br />
+            {/* Display Course Dates */}
             {course.startDate && course.endDate && (
               <small>
                 Course Duration:{" "}
@@ -249,49 +224,6 @@ export default function InstructorPage() {
             >
               {course.status.toUpperCase()}
             </span>
-            {/* Announcements Section */}
-            <div className="mt-2 mb-2">
-              <h6>Announcements</h6>
-              <div className="d-flex mb-2">
-                <input
-                  type="text"
-                  placeholder="Add new announcement"
-                  className="form-control me-2"
-                  value={announcementInputs[course._id] || ""}
-                  onChange={(e) =>
-                    setAnnouncementInputs((prev) => ({
-                      ...prev,
-                      [course._id]: e.target.value,
-                    }))
-                  }
-                />
-                <button
-                  className="btn btn-primary"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    handleAddAnnouncement(course._id);
-                  }}
-                >
-                  POST
-                </button>
-              </div>
-              {(!course.announcements || course.announcements.length === 0) && (
-                <p>No announcements yet.</p>
-              )}
-              <ul className="list-group">
-                {course.announcements?.map((a) => (
-                  <li
-                    key={a._id}
-                    className="list-group-item d-flex justify-content-between align-items-center"
-                  >
-                    {a.content}
-                    {isNew(a.createdAt) && (
-                      <span className="badge bg-warning">New</span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </div>
             <div className="mt-2">
               <Link
                 to={`/instructor/course/${course._id}/edit`}
@@ -300,21 +232,12 @@ export default function InstructorPage() {
                 Edit
               </Link>
 
-
-
               <Link
                 to={`/instructor/courses/${course._id}`}
                 className="btn btn-sm btn-primary me-2"
               >
                 Manage Lessons
               </Link>
-
-              <Link
-                  to={`/instructor/courses/${course._id}/discussion`}
-                  className="btn btn-sm btn-warning me-2"
-                >
-                  Discussion Board
-                </Link>
 
               <button
                 className="btn btn-sm btn-secondary me-2"

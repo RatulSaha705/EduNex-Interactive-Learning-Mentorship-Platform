@@ -125,13 +125,6 @@ export default function CourseList() {
                     {course.instructor?.name || "Unknown"}
                   </p>
 
-                  {/* ✅ Estimated Duration */}
-                  {course.duration && (
-                    <p>
-                      <strong>Estimated Duration:</strong> {course.duration}
-                    </p>
-                  )}
-
                   {/* Buttons */}
                   <div className="d-flex gap-2 mt-2">
                     {auth.user?.role === "student" &&
