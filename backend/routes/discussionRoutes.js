@@ -7,6 +7,8 @@ import {
   getQuestionAnswers,
   upvoteAnswer,
   markAnswerHelpful,
+  deleteQuestion,
+  deleteAnswer,
 } from "../controllers/discussionController.js";
 
 const router = express.Router();
@@ -41,6 +43,13 @@ router.post("/answers/:answerId/upvote", protect, upvoteAnswer);
 
 // Mark an answer as helpful / best answer
 router.post("/answers/:answerId/mark-helpful", protect, markAnswerHelpful);
+
+// Delete a question (author or course instructor)
+router.delete("/questions/:questionId", protect, deleteQuestion);
+
+// Delete an answer (author or course instructor)
+router.delete("/answers/:answerId", protect, deleteAnswer);
+
 
 
 export default router;

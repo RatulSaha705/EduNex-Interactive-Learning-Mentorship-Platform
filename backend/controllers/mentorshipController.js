@@ -643,26 +643,30 @@ export const getTodaySessionsForInstructor = async (req, res) => {
   try {
     const instructorId = req.user._id || req.user.id;
 
-    const startOfDay = new Date();
+    const now = new Date();
+    const startOfDay = new Date(now);
     startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date();
+    const endOfDay = new Date(now);
     endOfDay.setHours(23, 59, 59, 999);
 
     const sessions = await MentorshipSession.find({
       instructor: instructorId,
-      status: "booked",
-      startTime: { $gte: startOfDay, $lte: endOfDay },
+      status: "booked",                // only booked
+      startTime: { $gte: now, $lte: endOfDay }, // only upcoming today
     })
-      .sort({ startTime: 1 })
-      .populate({ path: "student", select: "name email" })
-      .populate({ path: "course", select: "title" });
+      .populate("student", "name email")
+      .populate("course", "title")
+      .sort({ startTime: 1 });
 
     res.json(sessions);
   } catch (error) {
     console.error("Error in getTodaySessionsForInstructor:", error);
-    res.status(500).json({ message: "Server error fetching today's sessions" });
+    res
+      .status(500)
+      .json({ message: "Server error fetching today's sessions" });
   }
 };
+
 
 /* ---------- Student: view & cancel their own sessions ---------- */
 
@@ -677,19 +681,20 @@ export const getMySessionsForStudent = async (req, res) => {
 
     const sessions = await MentorshipSession.find({
       student: studentId,
-      startTime: { $gte: now },
-      status: { $in: ["booked", "cancelledByStudent", "cancelledByInstructor"] },
+      status: "booked",            // only booked
+      startTime: { $gte: now },    // only upcoming
     })
-      .sort({ startTime: 1 })
-      .populate({ path: "instructor", select: "name email" })
-      .populate({ path: "course", select: "title" });
+      .populate("instructor", "name email")
+      .populate("course", "title")
+      .sort({ startTime: 1 });     // earliest first
 
     res.json(sessions);
   } catch (error) {
     console.error("Error in getMySessionsForStudent:", error);
-    res.status(500).json({ message: "Server error fetching your sessions" });
+    res.status(500).json({ message: "Server error fetching sessions" });
   }
 };
+
 
 /**
  * DELETE /api/mentorship/sessions/:id

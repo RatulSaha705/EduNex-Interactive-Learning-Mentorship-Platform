@@ -160,7 +160,7 @@ export default function InstructorPage() {
 
               <Link
                   to={`/instructor/courses/${course._id}/discussion`}
-                  className="btn btn-sm btn-outline-secondary me-2"
+                  className="btn btn-sm btn-warning me-2"
                 >
                   Discussion Board
                 </Link>

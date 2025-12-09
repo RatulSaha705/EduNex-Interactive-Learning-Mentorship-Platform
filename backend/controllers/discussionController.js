@@ -173,7 +173,7 @@ export const getQuestionAnswers = async (req, res) => {
 
     const answers = await Answer.find({ question: questionId })
       .populate("user", "name role")
-      .sort({ createdAt: 1 });
+      .sort({ upvotes: -1, createdAt: 1 });
 
     res.json(answers);
   } catch (error) {
@@ -324,6 +324,98 @@ export const markAnswerHelpful = async (req, res) => {
     });
   } catch (error) {
     console.error("Error marking answer helpful:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const deleteQuestion = async (req, res) => {
+  try {
+    const { questionId } = req.params;
+    const userId = req.user._id || req.user.id;
+
+    const question = await Question.findById(questionId);
+    if (!question) {
+      return res.status(404).json({ message: "Question not found" });
+    }
+
+    const course = await Course.findById(question.course).select("instructor");
+    if (!course) {
+      return res.status(404).json({ message: "Parent course not found" });
+    }
+
+    const isOwner = question.user.toString() === userId.toString();
+    const isInstructor =
+      course.instructor.toString() === userId.toString();
+
+    // author, course instructor, or admin
+    if (!isOwner && !isInstructor && req.user.role !== "admin") {
+      return res.status(403).json({
+        message:
+          "Only the question author or the course instructor can delete this question",
+      });
+    }
+
+    // delete all answers of this question
+    await Answer.deleteMany({ question: question._id });
+
+    await Question.findByIdAndDelete(question._id);
+
+    res.json({ message: "Question and its answers deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting question:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const deleteAnswer = async (req, res) => {
+  try {
+    const { answerId } = req.params;
+    const userId = req.user._id || req.user.id;
+
+    const answer = await Answer.findById(answerId);
+    if (!answer) {
+      return res.status(404).json({ message: "Answer not found" });
+    }
+
+    const question = await Question.findById(answer.question);
+    if (!question) {
+      return res.status(404).json({ message: "Parent question not found" });
+    }
+
+    const course = await Course.findById(question.course).select("instructor");
+    if (!course) {
+      return res.status(404).json({ message: "Parent course not found" });
+    }
+
+    const isOwner = answer.user.toString() === userId.toString();
+    const isInstructor =
+      course.instructor.toString() === userId.toString();
+
+    // author, course instructor, or admin
+    if (!isOwner && !isInstructor && req.user.role !== "admin") {
+      return res.status(403).json({
+        message:
+          "Only the answer author or the course instructor can delete this answer",
+      });
+    }
+
+    const wasHelpful = answer.isMarkedHelpful;
+
+    await Answer.findByIdAndDelete(answerId);
+
+    // if this answer was helpful, update question.isResolved
+    if (wasHelpful) {
+      const anyHelpful = await Answer.exists({
+        question: question._id,
+        isMarkedHelpful: true,
+      });
+      question.isResolved = !!anyHelpful;
+      await question.save();
+    }
+
+    res.json({ message: "Answer deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting answer:", error);
     res.status(500).json({ message: error.message });
   }
 };

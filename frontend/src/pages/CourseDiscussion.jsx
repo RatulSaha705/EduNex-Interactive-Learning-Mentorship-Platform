@@ -35,6 +35,83 @@ export default function CourseDiscussion() {
       (studentId) => studentId.toString() === auth.user.id
     );
 
+    const isCourseInstructor =
+    auth?.user &&
+    course?.instructor &&
+    course.instructor._id &&
+    course.instructor._id.toString() === auth.user.id;
+
+    // Who can delete?
+    // - Question: student who asked it OR instructor of the course
+    // - Answer: user who wrote it OR instructor of the course
+  
+    const canDeleteQuestion = (question) => {
+      if (!userId) return false;
+  
+      const qUserId =
+        (question.user && question.user._id) || question.user;
+  
+      const isOwner =
+        qUserId && qUserId.toString() === userId.toString();
+  
+      return isOwner || isCourseInstructor;
+    };
+  
+    const canDeleteAnswer = (answer) => {
+      if (!userId) return false;
+  
+      const aUserId =
+        (answer.user && answer.user._id) || answer.user;
+  
+      const isOwner =
+        aUserId && aUserId.toString() === userId.toString();
+  
+      return isOwner || isCourseInstructor;
+    };
+
+    const handleAnswerChange = (questionId, value) => {
+      setAnswerText((prev) => ({ ...prev, [questionId]: value }));
+    };
+  
+    const handleAnswerSubmit = async (e, questionId) => {
+      e.preventDefault();
+      setError("");
+  
+      const text = (answerText[questionId] || "").trim();
+      if (!text) {
+        setError("Answer content cannot be empty");
+        return;
+      }
+  
+      try {
+        const res = await axios.post(
+          `http://localhost:5000/api/discussions/questions/${questionId}/answers`,
+          { content: text },
+          {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${auth.token}`,
+            },
+          }
+        );
+  
+        setAnswersByQuestion((prev) => ({
+          ...prev,
+          [questionId]: prev[questionId]
+            ? [...prev[questionId], res.data]
+            : [res.data],
+        }));
+        setAnswerText((prev) => ({ ...prev, [questionId]: "" }));
+      } catch (err) {
+        console.error("Error posting answer:", err.response || err);
+        setError(
+          err.response?.data?.message ||
+            "Failed to post answer, please try again"
+        );
+      }
+    };
+  
+  
   // ----------------- LOAD COURSE ----------------- //
   useEffect(() => {
     const fetchCourse = async () => {
@@ -178,52 +255,9 @@ export default function CourseDiscussion() {
   };
 
   // ----------------- REPLY (ANSWER) ----------------- //
-  const handleAnswerChange = (questionId, value) => {
-    setAnswerText((prev) => ({ ...prev, [questionId]: value }));
-  };
-
-  const handleAnswerSubmit = async (e, questionId) => {
-    e.preventDefault();
-    setError("");
-
-    const text = (answerText[questionId] || "").trim();
-    if (!text) {
-      setError("Answer content cannot be empty");
-      return;
-    }
-
-    try {
-      const res = await axios.post(
-        `http://localhost:5000/api/discussions/questions/${questionId}/answers`,
-        { content: text },
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${auth.token}`,
-          },
-        }
-      );
-
-      setAnswersByQuestion((prev) => ({
-        ...prev,
-        [questionId]: prev[questionId]
-          ? [...prev[questionId], res.data]
-          : [res.data],
-      }));
-      setAnswerText((prev) => ({ ...prev, [questionId]: "" }));
-    } catch (err) {
-      console.error("Error posting answer:", err.response || err);
-      setError(
-        err.response?.data?.message ||
-          "Failed to post answer, please try again"
-      );
-    }
-  };
-
-  // ----------------- UPVOTE ANSWER ----------------- //
   const handleUpvoteAnswer = async (questionId, answerId) => {
     try {
-      const res = await axios.post(
+      await axios.post(
         `http://localhost:5000/api/discussions/answers/${answerId}/upvote`,
         {},
         {
@@ -232,15 +266,9 @@ export default function CourseDiscussion() {
           },
         }
       );
-  
-      const newUpvotes = res.data.upvotes;
-  
-      setAnswersByQuestion((prev) => ({
-        ...prev,
-        [questionId]: (prev[questionId] || []).map((ans) =>
-          ans._id === answerId ? { ...ans, upvotes: newUpvotes } : ans
-        ),
-      }));
+
+      // Re-fetch answers so they come back sorted by upvotes
+      await loadAnswers(questionId);
     } catch (err) {
       console.error("Error upvoting answer:", err.response || err);
       setError(
@@ -248,7 +276,8 @@ export default function CourseDiscussion() {
       );
     }
   };
-  
+
+
   // ----------------- MARK HELPFUL ----------------- //
   const handleMarkHelpful = async (questionId, answerId) => {
     try {
@@ -272,6 +301,84 @@ export default function CourseDiscussion() {
       );
     }
   };
+
+
+  const handleDeleteQuestion = async (questionId) => {
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this question? All its answers will also be deleted."
+    );
+    if (!confirmDelete) return;
+
+    try {
+      setError("");
+
+      await axios.delete(
+        `http://localhost:5000/api/discussions/questions/${questionId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${auth.token}`,
+          },
+        }
+      );
+
+      // Remove question from UI
+      setQuestions((prev) => prev.filter((q) => q._id !== questionId));
+
+      // Optional: clear answers cache for that question
+      setAnswersByQuestion((prev) => {
+        const copy = { ...prev };
+        delete copy[questionId];
+        return copy;
+      });
+
+      // Collapse if this question was expanded
+      if (expandedQuestionId === questionId) {
+        setExpandedQuestionId(null);
+      }
+    } catch (err) {
+      console.error("Error deleting question:", err.response || err);
+      setError(
+        err.response?.data?.message ||
+          "Failed to delete question, please try again"
+      );
+    }
+  };
+
+  const handleDeleteAnswer = async (questionId, answerId) => {
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this answer?"
+    );
+    if (!confirmDelete) return;
+
+    try {
+      setError("");
+
+      await axios.delete(
+        `http://localhost:5000/api/discussions/answers/${answerId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${auth.token}`,
+          },
+        }
+      );
+
+      // Remove answer from UI for this question
+      setAnswersByQuestion((prev) => {
+        const current = prev[questionId] || [];
+        return {
+          ...prev,
+          [questionId]: current.filter((a) => a._id !== answerId),
+        };
+      });
+    } catch (err) {
+      console.error("Error deleting answer:", err.response || err);
+      setError(
+        err.response?.data?.message ||
+          "Failed to delete answer, please try again"
+      );
+    }
+  };
+
 
   // ----------------- RENDER ----------------- //
   if (!auth.user) {
@@ -384,15 +491,28 @@ export default function CourseDiscussion() {
                     {q.user?.role || "user"})
                   </small>
 
-                  {/* Toggle answers */}
-                  <button
-                    className="btn btn-sm btn-link p-0 mb-2"
-                    onClick={() => handleToggleQuestion(qId)}
-                  >
-                    {expandedQuestionId === qId
-                      ? "Hide answers"
-                      : "View answers / reply"}
-                  </button>
+                  {/* Toggle answers + Delete question (if allowed) */}
+                  <div className="d-flex justify-content-between align-items-center mb-2">
+                    <button
+                      className="btn btn-sm btn-link p-0"
+                      onClick={() => handleToggleQuestion(qId)}
+                    >
+                      {expandedQuestionId === qId
+                        ? "Hide answers"
+                        : "View answers / reply"}
+                    </button>
+
+                    {canDeleteQuestion(q) && (
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-outline-danger"
+                        onClick={() => handleDeleteQuestion(qId)}
+                      >
+                        Delete Question
+                      </button>
+                    )}
+                  </div>
+
 
                   {expandedQuestionId === qId && (
                     <div className="mt-2">
@@ -447,7 +567,20 @@ export default function CourseDiscussion() {
                                         Helpful
                                       </span>
                                     )}
+
+                                    {canDeleteAnswer(a) && (
+                                      <button
+                                        type="button"
+                                        className="btn btn-sm btn-outline-danger ms-2"
+                                        onClick={() =>
+                                          handleDeleteAnswer(qId, a._id)
+                                        }
+                                      >
+                                        Delete
+                                      </button>
+                                    )}
                                   </div>
+
                                 </div>
                                 <p className="mb-1 mt-1">{a.content}</p>
                               </div>

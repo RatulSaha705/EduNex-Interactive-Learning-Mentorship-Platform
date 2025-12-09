@@ -269,7 +269,7 @@ export default function CourseDetails() {
         <div className="mt-3">
         <Link
           to={`/student/courses/${id}/discussion`}
-          className="btn btn-outline-info"
+          className="btn btn-info"
         >
           Go to Discussion Board
         </Link>
