@@ -1,0 +1,353 @@
+import { useState, useEffect, useContext } from "react";
+import axios from "axios";
+import { AuthContext } from "../context/AuthContext";
+import { Link, useLocation } from "react-router-dom";
+
+export default function InstructorPage() {
+  const { auth } = useContext(AuthContext);
+  const location = useLocation();
+
+  const [courses, setCourses] = useState([]);
+  const [form, setForm] = useState({
+    title: "",
+    description: "",
+    category: "",
+    status: "draft",
+    startDate: "",
+    endDate: "",
+  });
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const [announcementInputs, setAnnouncementInputs] = useState({}); // per course input
+
+  // Show success message from navigation
+  useEffect(() => {
+    if (location.state?.successMsg) {
+      setMessage(location.state.successMsg);
+      window.history.replaceState({}, document.title);
+      const timer = setTimeout(() => setMessage(""), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [location.state]);
+
+  // Fetch instructor's courses
+  const fetchCourses = async () => {
+    try {
+      const res = await axios.get("http://localhost:5000/api/courses", {
+        headers: { Authorization: `Bearer ${auth.token}` },
+      });
+      const myCourses = res.data.courses.filter(
+        (c) => c.instructor._id === auth.user.id
+      );
+      setCourses(myCourses);
+    } catch (err) {
+      setError("Error fetching courses");
+    }
+  };
+
+  useEffect(() => {
+    if (auth.user) fetchCourses();
+  }, [auth.user]);
+
+  // Create a new course
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setMessage("");
+    setError("");
+
+    if (!form.title.trim()) {
+      setError("Course title is required");
+      return;
+    }
+
+    try {
+      const res = await axios.post("http://localhost:5000/api/courses", form, {
+        headers: {
+          Authorization: `Bearer ${auth.token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      setMessage(res.data.message);
+      setTimeout(() => setMessage(""), 4000);
+
+      setForm({
+        title: "",
+        description: "",
+        category: "",
+        status: "draft",
+        startDate: "",
+        endDate: "",
+      });
+      fetchCourses();
+    } catch (err) {
+      setError(err.response?.data?.message || "Error creating course");
+    }
+  };
+
+  // Delete a course
+  const handleDeleteCourse = async (courseId) => {
+    if (!window.confirm("Are you sure you want to delete this course?")) return;
+
+    try {
+      await axios.delete(`http://localhost:5000/api/courses/${courseId}`, {
+        headers: { Authorization: `Bearer ${auth.token}` },
+      });
+      setCourses((prev) => prev.filter((c) => c._id !== courseId));
+      setMessage("Course deleted successfully");
+      setTimeout(() => setMessage(""), 4000);
+    } catch (err) {
+      setError("Failed to delete course");
+    }
+  };
+
+  // Toggle course status between draft/published
+  const handleToggleStatus = async (course) => {
+    try {
+      const newStatus = course.status === "published" ? "draft" : "published";
+      const res = await axios.put(
+        `http://localhost:5000/api/courses/${course._id}/status`,
+        { status: newStatus },
+        { headers: { Authorization: `Bearer ${auth.token}` } }
+      );
+      setCourses((prev) =>
+        prev.map((c) => (c._id === course._id ? res.data.course : c))
+      );
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to update status");
+    }
+  };
+
+  // Add announcement to a course
+  const handleAddAnnouncement = async (courseId) => {
+    const content = announcementInputs[courseId]?.trim();
+    if (!content) return;
+
+    try {
+      const res = await axios.post(
+        `http://localhost:5000/api/courses/${courseId}/announcements`,
+        { content },
+        { headers: { Authorization: `Bearer ${auth.token}` } }
+      );
+
+      setCourses((prev) =>
+        prev.map((c) =>
+          c._id === courseId
+            ? { ...c, announcements: res.data.announcements }
+            : c
+        )
+      );
+
+      setAnnouncementInputs((prev) => ({ ...prev, [courseId]: "" }));
+    } catch (err) {
+      console.log(err.response?.data?.message || "Failed to add announcement");
+    }
+  };
+
+  const isNew = (date) => {
+    const created = new Date(date);
+    const now = new Date();
+    return (now - created) / (1000 * 60 * 60 * 24) <= 3;
+  };
+
+  return (
+    <div className="container mt-4">
+      <h3>Instructor Dashboard</h3>
+
+      {/* Create Course */}
+      <div className="card p-3 mb-4">
+        <h5>Create New Course</h5>
+        <form onSubmit={handleSubmit} className="row g-2">
+          <div className="col-md-6">
+            <input
+              type="text"
+              placeholder="Course Title"
+              className="form-control"
+              value={form.title}
+              onChange={(e) => setForm({ ...form, title: e.target.value })}
+              required
+            />
+          </div>
+          <div className="col-md-6">
+            <input
+              type="text"
+              placeholder="Category"
+              className="form-control"
+              value={form.category}
+              onChange={(e) => setForm({ ...form, category: e.target.value })}
+            />
+          </div>
+          <div className="col-12">
+            <input
+              type="text"
+              placeholder="Description"
+              className="form-control"
+              value={form.description}
+              onChange={(e) =>
+                setForm({ ...form, description: e.target.value })
+              }
+            />
+          </div>
+          <div className="col-md-6">
+            <label>
+              Start Date:
+              <input
+                type="date"
+                className="form-control"
+                value={form.startDate}
+                onChange={(e) =>
+                  setForm({ ...form, startDate: e.target.value })
+                }
+                required
+              />
+            </label>
+          </div>
+          <div className="col-md-6">
+            <label>
+              End Date:
+              <input
+                type="date"
+                className="form-control"
+                value={form.endDate}
+                onChange={(e) => setForm({ ...form, endDate: e.target.value })}
+                required
+              />
+            </label>
+          </div>
+          <div className="col-md-6">
+            <select
+              className="form-control"
+              value={form.status}
+              onChange={(e) => setForm({ ...form, status: e.target.value })}
+            >
+              <option value="draft">Draft</option>
+              <option value="published">Publish</option>
+            </select>
+          </div>
+          <div className="col-md-6 d-flex align-items-end">
+            <button className="btn btn-primary w-100">Create Course</button>
+          </div>
+        </form>
+
+        {message && <p className="text-success mt-2">{message}</p>}
+        {error && <p className="text-danger mt-2">{error}</p>}
+      </div>
+
+      {/* My Courses */}
+      <h5>My Courses</h5>
+      {courses.length === 0 && <p>No courses created yet.</p>}
+
+      <ul className="list-group">
+        {courses.map((course) => (
+          <li key={course._id} className="list-group-item mb-3">
+            <div className="d-flex justify-content-between align-items-start">
+              <div>
+                <strong>{course.title}</strong> — {course.category}
+                {course.description && (
+                  <p className="mb-1">{course.description}</p>
+                )}
+                {course.startDate && course.endDate && (
+                  <small>
+                    Duration: {new Date(course.startDate).toLocaleDateString()}{" "}
+                    - {new Date(course.endDate).toLocaleDateString()}
+                  </small>
+                )}
+                <br />
+                <small className="text-muted">
+                  Lessons: {course.lessons?.length || 0}
+                </small>
+                <br />
+                <span
+                  className={`badge ${
+                    course.status === "published" ? "bg-success" : "bg-warning"
+                  }`}
+                >
+                  {course.status.toUpperCase()}
+                </span>
+              </div>
+
+              <div className="d-flex flex-column gap-2">
+                <Link
+                  to={`/instructor/course/${course._id}/edit`}
+                  className="btn btn-sm btn-warning"
+                >
+                  Edit
+                </Link>
+                <Link
+                  to={`/instructor/courses/${course._id}`}
+                  className="btn btn-sm btn-primary"
+                >
+                  Manage Lessons
+                </Link>
+                <Link
+                  to={`/instructor/courses/${course._id}/discussion`}
+                  className="btn btn-sm btn-secondary"
+                >
+                  Discussion Board
+                </Link>
+                <button
+                  className="btn btn-sm btn-secondary"
+                  onClick={() => handleToggleStatus(course)}
+                >
+                  {course.status === "published" ? "Unpublish" : "Publish"}
+                </button>
+                <button
+                  className="btn btn-sm btn-danger"
+                  onClick={() => handleDeleteCourse(course._id)}
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+
+            {/* Announcements */}
+            <div className="mt-3">
+              <h6>Announcements</h6>
+              <div className="d-flex mb-2">
+                <input
+                  type="text"
+                  placeholder="Add new announcement"
+                  className="form-control me-2"
+                  value={announcementInputs[course._id] || ""}
+                  onChange={(e) =>
+                    setAnnouncementInputs((prev) => ({
+                      ...prev,
+                      [course._id]: e.target.value,
+                    }))
+                  }
+                />
+                <button
+                  className="btn btn-primary"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleAddAnnouncement(course._id);
+                  }}
+                >
+                  POST
+                </button>
+              </div>
+
+              {(!course.announcements || course.announcements.length === 0) && (
+                <p>No announcements yet.</p>
+              )}
+
+              <ul className="list-group">
+                {course.announcements?.map((a) => (
+                  <li
+                    key={a._id}
+                    className="list-group-item d-flex justify-content-between align-items-center"
+                  >
+                    {a.content}
+                    {isNew(a.createdAt) && (
+                      <span className="badge bg-warning">New</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}

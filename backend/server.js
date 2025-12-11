@@ -16,6 +16,10 @@ import userProfileRoutes from "./routes/userProfileRoutes.js";
 import adminUserRoutes from "./routes/adminUserRoutes.js";
 import courseAnalyticsRoutes from "./routes/courseAnalyticsRoutes.js";
 
+import discussionRoutes from "./routes/discussionRoutes.js";
+import mentorshipRoutes from "./routes/mentorshipRoutes.js";
+import notificationRoutes from "./routes/notificationRoutes.js";
+
 dotenv.config();
 connectDB();
 
@@ -26,8 +30,8 @@ app.use(express.json());
 
 
 // Routes
-app.use("/api/auth", authRoutes); 
-app.use("/api/courses", courseRoutes); 
+//app.use("/api/auth", authRoutes); 
+//app.use("/api/courses", courseRoutes); 
 app.use("/api/reports", reportRoutes);
 app.use("/api/enrollments", enrollmentRoutes);
 app.use("/api/admin", adminAnalyticsRoutes);
@@ -36,6 +40,11 @@ app.use("/api/recommendations", recommendationRoutes);
 app.use("/api/me", userProfileRoutes);
 app.use("/api/admin", adminUserRoutes);
 app.use("/api/courses", courseAnalyticsRoutes);
+app.use("/api/auth", authRoutes); // All auth routes prefixed with /api/auth
+app.use("/api/courses", courseRoutes); // ✅ mount course routes
+app.use("/api/discussions", discussionRoutes); 
+app.use("/api/mentorship", mentorshipRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 // Test route
 app.get("/", (req, res) => {
