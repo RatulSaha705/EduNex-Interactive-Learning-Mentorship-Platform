@@ -32,6 +32,8 @@ import StudentConsultationBooking from "./pages/StudentConsultationBooking";
 import InstructorConsultationSchedule from "./pages/InstructorConsultationSchedule";
 import InstructorTodayConsultations from "./pages/InstructorTodayConsultations";
 import NotificationsPage from "./pages/NotificationsPage";
+import MyCertificates from "./pages/MyCertificates";
+import CertificateDetail from "./pages/CertificateDetail";
 
 function App() {
   const { auth } = useContext(AuthContext);
@@ -68,7 +70,7 @@ function App() {
             element={auth.user ? <Profile /> : <Navigate to="/" />}
           />
 
-          {/* Student */}
+                    {/* Student */}
           <Route
             path="/student"
             element={
@@ -98,6 +100,28 @@ function App() {
           <Route
             path="/student/courses/:id/consultation"
             element={<StudentConsultationBooking />}
+          />
+
+          {/* Certificates */}
+          <Route
+            path="/student/certificates"
+            element={
+              auth.user?.role === "student" ? (
+                <MyCertificates />
+              ) : (
+                <Navigate to="/" />
+              )
+            }
+          />
+          <Route
+            path="/student/certificates/:id"
+            element={
+              auth.user?.role === "student" ? (
+                <CertificateDetail />
+              ) : (
+                <Navigate to="/" />
+              )
+            }
           />
 
           {/* Instructor */}

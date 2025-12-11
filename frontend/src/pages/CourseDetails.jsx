@@ -14,8 +14,10 @@ export default function CourseDetails() {
   const [selectedLesson, setSelectedLesson] = useState(null);
   const [announcements, setAnnouncements] = useState([]);
   const [newAnnouncement, setNewAnnouncement] = useState("");
+  const [certificate, setCertificate] = useState(null);
+  const [certificateError, setCertificateError] = useState("");
 
-  useEffect(() => {
+    useEffect(() => {
     if (!auth?.token) return;
 
     const fetchCourse = async () => {
@@ -44,6 +46,37 @@ export default function CourseDetails() {
 
     fetchCourse();
   }, [id, auth?.token, auth?.user?.role]);
+
+  // 🔹 NEW: certificate fetch
+  useEffect(() => {
+    if (!auth?.token || auth?.user?.role !== "student" || !course) return;
+
+    const fetchCertificateForCourse = async () => {
+      try {
+        const res = await axios.get(
+          "http://localhost:5000/api/certificates/my",
+          {
+            headers: { Authorization: `Bearer ${auth.token}` },
+          }
+        );
+        const certs = res.data.certificates || [];
+        const found = certs.find(
+          (c) => c.course && c.course._id === id
+        );
+        if (found) {
+          setCertificate(found);
+          setCertificateError("");
+        }
+      } catch (err) {
+        console.error(err);
+        setCertificateError(
+          err.response?.data?.message || "Failed to load certificate info"
+        );
+      }
+    };
+
+    fetchCertificateForCourse();
+  }, [auth?.token, auth?.user?.role, course, id]);
 
   useEffect(() => {
     if (!window.YT) {
@@ -74,11 +107,17 @@ export default function CourseDetails() {
       );
       if (studentProgress?.lessons.includes(lessonId)) return;
 
-      await axios.post(
+      const res = await axios.post(
         `http://localhost:5000/api/courses/${id}/lessons/${lessonId}/complete`,
         {},
         { headers: { Authorization: `Bearer ${auth.token}` } }
       );
+
+      // If backend returns certificate when progress hits 100%
+      if (res.data?.certificate) {
+        setCertificate(res.data.certificate);
+        setCertificateError("");
+      }
 
       setCourse((prevCourse) => {
         const updatedCompletedLessons = [...prevCourse.completedLessons];
@@ -309,7 +348,7 @@ export default function CourseDetails() {
         )}
       </div>
 
-      {/* Progress & Enrollment */}
+           {/* Progress & Enrollment */}
       {alreadyEnrolled && (
         <div className="bg-white shadow rounded p-4">
           <h5 className="mb-2 font-medium">Course Progress: {progress}%</h5>
@@ -319,6 +358,63 @@ export default function CourseDetails() {
               style={{ width: `${progress}%` }}
             ></div>
           </div>
+
+          {/* 🔹 NEW: Certificate banner when course is fully completed */}
+          {progress === 100 && (
+            <div className="mt-4 p-3 border border-green-300 bg-green-50 rounded">
+              {certificate ? (
+                <>
+                  <p className="font-medium text-green-800">
+                    🎉 Congratulations! You’ve completed this course.
+                  </p>
+
+                  {certificate.certificateCode && (
+                    <p className="text-sm text-green-700 mt-1">
+                      Certificate Code:{" "}
+                      <span className="font-mono font-semibold">
+                        {certificate.certificateCode}
+                      </span>
+                    </p>
+                  )}
+
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <Link
+                      to="/student/certificates"
+                      className="px-3 py-1 text-sm border border-green-700 text-green-700 rounded hover:bg-green-100"
+                    >
+                      View All Certificates
+                    </Link>
+
+                    {certificate.pdfUrl && certificate.status === "issued" && (
+                      <a
+                        href={certificate.pdfUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700"
+                      >
+                        Download Certificate
+                      </a>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <p className="text-sm text-green-800">
+                  🎉 Course completed! Your certificate will appear in{" "}
+                  <Link
+                    to="/student/certificates"
+                    className="underline font-medium"
+                  >
+                    My Certificates
+                  </Link>{" "}
+                  once it is issued.
+                </p>
+              )}
+
+              {certificateError && (
+                <p className="text-xs text-red-600 mt-1">{certificateError}</p>
+              )}
+            </div>
+          )}
         </div>
       )}
 

@@ -10,6 +10,7 @@ import courseRoutes from "./routes/courseRoutes.js"; // ✅ import courses
 import discussionRoutes from "./routes/discussionRoutes.js";
 import mentorshipRoutes from "./routes/mentorshipRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
+import certificateRoutes from "./routes/certificateRoutes.js";
 
 dotenv.config();
 connectDB();
@@ -25,6 +26,7 @@ app.use("/api/courses", courseRoutes); // ✅ mount course routes
 app.use("/api/discussions", discussionRoutes); 
 app.use("/api/mentorship", mentorshipRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/certificates", certificateRoutes);
 
 // Test route
 app.get("/", (req, res) => {

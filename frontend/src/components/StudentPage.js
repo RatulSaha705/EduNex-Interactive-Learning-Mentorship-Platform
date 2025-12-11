@@ -82,6 +82,13 @@ export default function StudentPage() {
         </Link>
 
         <Link
+          to="/student/certificates"
+          className="px-5 py-3 bg-purple-200 text-purple-800 rounded-lg shadow hover:bg-purple-300 transition font-medium"
+        >
+          My Certificates
+        </Link>
+
+        <Link
           to="/student/consultations"
           className="px-5 py-3 bg-indigo-200 text-indigo-800 rounded-lg shadow hover:bg-indigo-300 transition font-medium"
         >
