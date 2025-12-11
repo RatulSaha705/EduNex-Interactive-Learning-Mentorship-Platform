@@ -92,14 +92,11 @@ export const getCourseQuestions = async (req, res) => {
 
     const questions = await Question.find({ course: courseId })
       .populate("user", "name role")
-      .sort({ 
-        isResolved: 1,     // unresolved (false) first, resolved (true) last
-        createdAt: -1      // within each group: newest first
-      });
+      .sort({isResolved: 1, createdAt: -1 });
 
     res.json(questions);
   } catch (error) {
-    console.error("Error loading questions:", error);
+    console.error("Error fetching questions:", error);
     res.status(500).json({ message: error.message });
   }
 };

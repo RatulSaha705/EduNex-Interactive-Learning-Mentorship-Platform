@@ -109,7 +109,7 @@ export const upsertAvailabilityForDate = async (req, res) => {
     const instructorId = req.user._id || req.user.id;
     const { date, timeRanges = [], dayNote, isBlocked } = req.body;
 
-    if (!date || !isValidYyyyMmDd(date)) {
+    if (!date) {
       return res
         .status(400)
         .json({ message: "Valid 'date' (YYYY-MM-DD) is required" });
