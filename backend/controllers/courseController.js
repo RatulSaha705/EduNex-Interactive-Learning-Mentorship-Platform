@@ -1,6 +1,9 @@
 import Course from "../models/Course.js";
 import User from "../models/User.js";
 import Notification from "../models/Notification.js";
+// backend/controllers/courseController.js
+import { issueCertificateOnCourseCompletion } from "./certificateController.js";
+
 // ----------------- INSTRUCTOR ----------------- //
 
 // ----------------- INSTRUCTOR -----------------
@@ -279,7 +282,17 @@ export const completeLesson = async (req, res) => {
       (studentProgress.lessons.length / course.lessons.length) * 100
     );
 
-    res.json({ message: "Lesson marked as completed", progress });
+    // 🔹 NEW: auto-generate certificate when course is fully completed
+    let certificate = null;
+    if (progress === 100) {
+      certificate = await issueCertificateOnCourseCompletion(course, studentId);
+    }
+
+    res.json({
+      message: "Lesson marked as completed",
+      progress,
+      certificate, // will be null until 100% completion
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: error.message });
