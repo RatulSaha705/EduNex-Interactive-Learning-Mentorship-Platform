@@ -94,6 +94,15 @@ export default function StudentPage() {
         >
           Manage Consultations
         </Link>
+
+       {/* 🔹 NEW: Learning Stats button */}
+        <Link
+          to="/student/stats"
+          className="px-5 py-3 bg-orange-200 text-orange-800 rounded-lg shadow hover:bg-orange-300 transition font-medium"
+        >
+          Learning Stats &amp; Analytics
+        </Link>
+
       </div>
 
       {/* Enrolled Courses */}

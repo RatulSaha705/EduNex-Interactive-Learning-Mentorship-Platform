@@ -34,6 +34,7 @@ import InstructorTodayConsultations from "./pages/InstructorTodayConsultations";
 import NotificationsPage from "./pages/NotificationsPage";
 import MyCertificates from "./pages/MyCertificates";
 import CertificateDetail from "./pages/CertificateDetail";
+import LearningStats from "./pages/LearningStats";
 
 function App() {
   const { auth } = useContext(AuthContext);
@@ -70,7 +71,7 @@ function App() {
             element={auth.user ? <Profile /> : <Navigate to="/" />}
           />
 
-                    {/* Student */}
+          {/* Student */}
           <Route
             path="/student"
             element={
@@ -102,6 +103,18 @@ function App() {
             element={<StudentConsultationBooking />}
           />
 
+          {/* Learning Stats */}
+          <Route
+            path="/student/stats"
+            element={
+              auth.user?.role === "student" ? (
+                <LearningStats />
+              ) : (
+                <Navigate to="/" />
+              )
+            }
+          />
+
           {/* Certificates */}
           <Route
             path="/student/certificates"
@@ -123,6 +136,7 @@ function App() {
               )
             }
           />
+
 
           {/* Instructor */}
           <Route
