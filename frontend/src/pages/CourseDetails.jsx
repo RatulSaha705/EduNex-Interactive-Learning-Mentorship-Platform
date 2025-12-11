@@ -1,5 +1,5 @@
 import { useEffect, useState, useContext } from "react";
-import { useParams,Link } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import axios from "axios";
 import { AuthContext } from "../context/AuthContext";
 
@@ -14,9 +14,10 @@ export default function CourseDetails() {
   const [selectedLesson, setSelectedLesson] = useState(null);
   const [announcements, setAnnouncements] = useState([]);
   const [newAnnouncement, setNewAnnouncement] = useState("");
+  const [certificate, setCertificate] = useState(null);
+  const [certificateError, setCertificateError] = useState("");
 
-  // Fetch course details
-  useEffect(() => {
+    useEffect(() => {
     if (!auth?.token) return;
 
     const fetchCourse = async () => {
@@ -45,6 +46,37 @@ export default function CourseDetails() {
 
     fetchCourse();
   }, [id, auth?.token, auth?.user?.role]);
+
+  // 🔹 NEW: certificate fetch
+  useEffect(() => {
+    if (!auth?.token || auth?.user?.role !== "student" || !course) return;
+
+    const fetchCertificateForCourse = async () => {
+      try {
+        const res = await axios.get(
+          "http://localhost:5000/api/certificates/my",
+          {
+            headers: { Authorization: `Bearer ${auth.token}` },
+          }
+        );
+        const certs = res.data.certificates || [];
+        const found = certs.find(
+          (c) => c.course && c.course._id === id
+        );
+        if (found) {
+          setCertificate(found);
+          setCertificateError("");
+        }
+      } catch (err) {
+        console.error(err);
+        setCertificateError(
+          err.response?.data?.message || "Failed to load certificate info"
+        );
+      }
+    };
+
+    fetchCertificateForCourse();
+  }, [auth?.token, auth?.user?.role, course, id]);
 
   useEffect(() => {
     if (!window.YT) {
@@ -75,11 +107,17 @@ export default function CourseDetails() {
       );
       if (studentProgress?.lessons.includes(lessonId)) return;
 
-      await axios.post(
+      const res = await axios.post(
         `http://localhost:5000/api/courses/${id}/lessons/${lessonId}/complete`,
         {},
         { headers: { Authorization: `Bearer ${auth.token}` } }
       );
+
+      // If backend returns certificate when progress hits 100%
+      if (res.data?.certificate) {
+        setCertificate(res.data.certificate);
+        setCertificateError("");
+      }
 
       setCourse((prevCourse) => {
         const updatedCompletedLessons = [...prevCourse.completedLessons];
@@ -128,11 +166,6 @@ export default function CourseDetails() {
   const renderLessonContent = () => {
     if (!selectedLesson) return null;
 
-    const completed =
-      course.completedLessons
-        ?.find((cl) => cl.student.toString() === auth.user.id)
-        ?.lessons.includes(selectedLesson._id) || false;
-
     switch (selectedLesson.contentType) {
       case "video":
         const embedUrl =
@@ -154,6 +187,7 @@ export default function CourseDetails() {
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
               onLoad={() => handleCompleteLesson(selectedLesson._id)}
+              className="rounded shadow"
             />
           );
         }
@@ -165,6 +199,7 @@ export default function CourseDetails() {
             height="400"
             controls
             onEnded={() => handleCompleteLesson(selectedLesson._id)}
+            className="rounded shadow"
           >
             <source src={selectedLesson.url} type="video/mp4" />
             Your browser does not support the video tag.
@@ -181,6 +216,7 @@ export default function CourseDetails() {
             title={selectedLesson.title}
             frameBorder="0"
             onLoad={() => handleCompleteLesson(selectedLesson._id)}
+            className="rounded shadow"
           />
         );
 
@@ -191,7 +227,7 @@ export default function CourseDetails() {
             href={selectedLesson.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="btn btn-primary"
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 shadow"
             onClick={() => handleCompleteLesson(selectedLesson._id)}
           >
             Open Document
@@ -227,10 +263,16 @@ export default function CourseDetails() {
     }
   };
 
-  if (loading) return <p>Loading course...</p>;
-  if (!auth?.user) return <p>Please login to view course details</p>;
-  if (error) return <p className="text-danger">{error}</p>;
-  if (!course) return <p>Course not found</p>;
+  if (loading)
+    return <p className="text-center text-gray-500 mt-4">Loading course...</p>;
+  if (!auth?.user)
+    return (
+      <p className="text-center text-red-500 mt-4">
+        Please login to view course details
+      </p>
+    );
+  if (error) return <p className="text-center text-red-600 mt-4">{error}</p>;
+  if (!course) return <p className="text-center mt-4">Course not found</p>;
 
   const alreadyEnrolled =
     course.enrolledStudents?.some(
@@ -258,203 +300,262 @@ export default function CourseDetails() {
   };
 
   return (
-    <div className="container mt-4">
-      <h2>{course.title}</h2>
-      <p>{course.description}</p>
-
-      {/* Course Info visible for all roles */}
-      <p>
-        <strong>Category:</strong> {course.category || "N/A"}
-      </p>
-      <p>
-        <strong>Instructor:</strong> {course.instructor?.name || "Unknown"}
-      </p>
-      <p>
-        <strong>Duration:</strong>{" "}
-        {course.startDate && course.endDate
-          ? `${new Date(course.startDate).toLocaleDateString()} - ${new Date(
-              course.endDate
-            ).toLocaleDateString()}`
-          : "N/A"}
-      </p>
-      <hr />
-      <h4>Important Dates</h4>
-
-      {course.endDate ? (
-        <div className="border rounded p-3 mb-3">
-          <p className="text-muted mb-1">
-            {new Date(course.endDate).toLocaleDateString("en-US", {
-              weekday: "short",
-              year: "numeric",
-              month: "short",
-              day: "numeric",
-            })}
-          </p>
-
-          <h6 className="mb-1">Course ends</h6>
-
-          <p className="mb-0 text-secondary">
-            After the course ends, the course content will be archived and no
-            longer active.
-          </p>
+    <div className="max-w-7xl mx-auto p-4 space-y-6">
+      {/* Course Header */}
+      <div className="bg-white shadow rounded p-4 space-y-2">
+        <h2 className="text-3xl font-bold">{course.title}</h2>
+        <p className="text-gray-700">{course.description}</p>
+        <div className="flex flex-wrap gap-4 text-sm text-gray-600">
+          <span>
+            <strong>Category:</strong> {course.category || "N/A"}
+          </span>
+          <span>
+            <strong>Instructor:</strong> {course.instructor?.name || "Unknown"}
+          </span>
+          <span>
+            <strong>Duration:</strong>{" "}
+            {course.startDate && course.endDate
+              ? `${new Date(
+                  course.startDate
+                ).toLocaleDateString()} - ${new Date(
+                  course.endDate
+                ).toLocaleDateString()}`
+              : "N/A"}
+          </span>
         </div>
-      ) : (
-        <p>No important dates available.</p>
-      )}
+      </div>
 
-      <p>
-        <strong>Total Lessons:</strong> {course.lessons?.length || 0}
-      </p>
+      {/* Important Dates */}
+      <div className="bg-white shadow rounded p-4 space-y-2">
+        <h4 className="text-xl font-semibold">Important Dates</h4>
+        {course.endDate ? (
+          <div className="bg-gray-50 border rounded p-3">
+            <p className="text-gray-500 mb-1">
+              {new Date(course.endDate).toLocaleDateString("en-US", {
+                weekday: "short",
+                year: "numeric",
+                month: "short",
+                day: "numeric",
+              })}
+            </p>
+            <h6 className="font-medium mb-1">Course ends</h6>
+            <p className="text-gray-600">
+              After the course ends, the course content will be archived.
+            </p>
+          </div>
+        ) : (
+          <p>No important dates available.</p>
+        )}
+      </div>
 
-      {/* Progress Bar */}
+           {/* Progress & Enrollment */}
       {alreadyEnrolled && (
-        <div className="mb-3">
-          <h5>Course Progress: {progress}%</h5>
-          <div className="progress">
+        <div className="bg-white shadow rounded p-4">
+          <h5 className="mb-2 font-medium">Course Progress: {progress}%</h5>
+          <div className="w-full bg-gray-200 h-4 rounded-full">
             <div
-              className="progress-bar"
-              role="progressbar"
+              className="bg-blue-600 h-4 rounded-full transition-all"
               style={{ width: `${progress}%` }}
-              aria-valuenow={progress}
-              aria-valuemin="0"
-              aria-valuemax="100"
             ></div>
           </div>
+
+          {/* 🔹 NEW: Certificate banner when course is fully completed */}
+          {progress === 100 && (
+            <div className="mt-4 p-3 border border-green-300 bg-green-50 rounded">
+              {certificate ? (
+                <>
+                  <p className="font-medium text-green-800">
+                    🎉 Congratulations! You’ve completed this course.
+                  </p>
+
+                  {certificate.certificateCode && (
+                    <p className="text-sm text-green-700 mt-1">
+                      Certificate Code:{" "}
+                      <span className="font-mono font-semibold">
+                        {certificate.certificateCode}
+                      </span>
+                    </p>
+                  )}
+
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <Link
+                      to="/student/certificates"
+                      className="px-3 py-1 text-sm border border-green-700 text-green-700 rounded hover:bg-green-100"
+                    >
+                      View All Certificates
+                    </Link>
+
+                    {certificate.pdfUrl && certificate.status === "issued" && (
+                      <a
+                        href={certificate.pdfUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700"
+                      >
+                        Download Certificate
+                      </a>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <p className="text-sm text-green-800">
+                  🎉 Course completed! Your certificate will appear in{" "}
+                  <Link
+                    to="/student/certificates"
+                    className="underline font-medium"
+                  >
+                    My Certificates
+                  </Link>{" "}
+                  once it is issued.
+                </p>
+              )}
+
+              {certificateError && (
+                <p className="text-xs text-red-600 mt-1">{certificateError}</p>
+              )}
+            </div>
+          )}
         </div>
       )}
 
-        {auth.user?.role === "student" && (
-        <div className="mb-3">
+      {auth.user?.role === "student" && (
+        <div className="flex flex-wrap gap-2">
           {!alreadyEnrolled ? (
-            <button className="btn btn-primary me-2" onClick={handleEnroll}>
+            <button
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 shadow"
+              onClick={handleEnroll}
+            >
               Enroll
             </button>
           ) : (
-            <button className="btn btn-secondary me-2" disabled>
+            <button
+              className="px-4 py-2 bg-gray-400 text-white rounded shadow"
+              disabled
+            >
               Already Enrolled
             </button>
           )}
-
-            {alreadyEnrolled && (
-              <Link
-                to={`/student/courses/${id}/consultation`}
-                className="btn btn-info"
-              >
-                Book Consultation
-              </Link>
-            )}
-
+          {alreadyEnrolled && (
+            <Link
+              to={`/student/courses/${id}/consultation`}
+              className="px-4 py-2 bg-teal-500 text-white rounded hover:bg-teal-600 shadow"
+            >
+              Book Consultation
+            </Link>
+          )}
         </div>
       )}
 
+      <Link
+        to={`/student/courses/${id}/discussion`}
+        className="px-4 py-2 bg-indigo-500 text-white rounded hover:bg-indigo-600 shadow"
+      >
+        Go to Discussion Board
+      </Link>
 
-        <div className="mt-3">
-        <Link
-          to={`/student/courses/${id}/discussion`}
-          className="btn btn-info"
-        >
-          Go to Discussion Board
-        </Link>
+      {enrollMsg && <p className="text-green-600">{enrollMsg}</p>}
+
+      {/* Announcements */}
+      <div className="bg-white shadow rounded p-4 space-y-2">
+        <h4 className="text-xl font-semibold">Announcements</h4>
+        {auth.user.role === "instructor" && (
+          <div className="flex gap-2">
+            <input
+              type="text"
+              className="border border-gray-300 rounded px-3 py-2 flex-1"
+              placeholder="Add new announcement"
+              value={newAnnouncement}
+              onChange={(e) => setNewAnnouncement(e.target.value)}
+            />
+            <button
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 shadow"
+              onClick={handleAddAnnouncement}
+            >
+              Add
+            </button>
+          </div>
+        )}
+        {announcements.length === 0 ? (
+          <p>No announcements yet.</p>
+        ) : (
+          <ul className="divide-y divide-gray-200">
+            {announcements.map((a) => (
+              <li
+                key={a._id}
+                className="py-2 flex justify-between items-center"
+              >
+                {a.content}
+                {isNew(a.createdAt) && (
+                  <span className="bg-yellow-400 text-black px-2 py-0.5 rounded text-xs ml-2">
+                    New
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
-      {enrollMsg && <p className="mt-2">{enrollMsg}</p>}
-      {/* Announcements Panel */}
-      <hr />
-      <h4>Announcements</h4>
-
-      {auth.user.role === "instructor" && (
-        <div className="mb-3 d-flex">
-          <input
-            type="text"
-            className="form-control me-2"
-            placeholder="Add new announcement"
-            value={newAnnouncement}
-            onChange={(e) => setNewAnnouncement(e.target.value)}
-          />
-          <button className="btn btn-primary" onClick={handleAddAnnouncement}>
-            Add
-          </button>
-        </div>
-      )}
-
-      {announcements.length === 0 && <p>No announcements yet.</p>}
-      <ul className="list-group mb-3">
-        {announcements.map((a) => (
-          <li
-            key={a._id}
-            className="list-group-item d-flex justify-content-between align-items-center"
-          >
-            {a.content}
-            {isNew(a.createdAt) && (
-              <span className="badge bg-warning">New</span>
-            )}
-          </li>
-        ))}
-      </ul>
-
+      {/* Lessons */}
       {alreadyEnrolled && (
-        <>
-          <hr />
-          <h4>Lessons</h4>
+        <div className="bg-white shadow rounded p-4 space-y-2">
+          <h4 className="text-xl font-semibold">Lessons</h4>
           {course.lessons?.length === 0 && <p>No lessons added yet.</p>}
 
-          <div className="row">
-            <div className="col-md-4">
-              <ul className="list-group">
-                {course.lessons?.map((lesson, index) => {
-                  const completed =
-                    course.completedLessons
-                      ?.find((cl) => cl.student.toString() === auth.user.id)
-                      ?.lessons.includes(lesson._id) || false;
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="md:w-1/3 border rounded divide-y divide-gray-200">
+              {course.lessons?.map((lesson, index) => {
+                const completed =
+                  course.completedLessons
+                    ?.find((cl) => cl.student.toString() === auth.user.id)
+                    ?.lessons.includes(lesson._id) || false;
+                const locked = isLessonLocked(index);
 
-                  const locked = isLessonLocked(index);
-
-                  return (
-                    <li
-                      key={lesson._id}
-                      className={`list-group-item d-flex justify-content-between align-items-center ${
-                        selectedLesson?._id === lesson._id ? "active" : ""
-                      }`}
-                      style={{ cursor: locked ? "not-allowed" : "pointer" }}
-                      onClick={() => {
-                        if (!locked) setSelectedLesson(lesson);
-                        else alert("Complete previous lesson first 🔒");
-                      }}
-                    >
+                return (
+                  <div
+                    key={lesson._id}
+                    className={`flex justify-between items-center px-3 py-2 cursor-pointer ${
+                      selectedLesson?._id === lesson._id
+                        ? "bg-blue-100 font-semibold"
+                        : ""
+                    } ${locked ? "opacity-50" : "hover:bg-gray-100"}`}
+                    onClick={() => {
+                      if (!locked) setSelectedLesson(lesson);
+                      else alert("Complete previous lesson first 🔒");
+                    }}
+                  >
+                    <span>
                       {index + 1}. {lesson.title} ({lesson.contentType})
+                    </span>
+                    <span className="flex gap-1">
                       {completed && (
-                        <span className="badge bg-success">Completed</span>
+                        <span className="bg-green-500 text-white px-2 py-0.5 rounded text-xs">
+                          Completed
+                        </span>
                       )}
                       {locked && (
-                        <span className="badge bg-secondary ms-2">
+                        <span className="bg-gray-400 text-white px-2 py-0.5 rounded text-xs">
                           🔒 Locked
                         </span>
                       )}
-                    </li>
-                  );
-                })}
-              </ul>
+                    </span>
+                  </div>
+                );
+              })}
             </div>
 
-            <div className="col-md-8">
-              <h5>Lesson Viewer</h5>
+            <div className="md:w-2/3">
+              <h5 className="font-medium mb-2">Lesson Viewer</h5>
               {!selectedLesson && <p>Select a lesson to start learning</p>}
               {selectedLesson && (
-                <div className="card p-3">{renderLessonContent()}</div>
+                <div className="border rounded p-3">
+                  {renderLessonContent()}
+                </div>
               )}
             </div>
           </div>
-        </>
+        </div>
       )}
-
-      {/* Enroll button only for students who are not enrolled */}
-      {auth?.user?.role === "student" && !alreadyEnrolled && (
-        <button className="btn btn-primary" onClick={handleEnroll}>
-          Enroll
-        </button>
-      )}
-
-      {enrollMsg && <p className="mt-2">{enrollMsg}</p>}
     </div>
   );
 }

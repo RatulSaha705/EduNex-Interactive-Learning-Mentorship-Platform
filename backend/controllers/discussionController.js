@@ -92,7 +92,7 @@ export const getCourseQuestions = async (req, res) => {
 
     const questions = await Question.find({ course: courseId })
       .populate("user", "name role")
-      .sort({ createdAt: -1 });
+      .sort({isResolved: 1, createdAt: -1 });
 
     res.json(questions);
   } catch (error) {

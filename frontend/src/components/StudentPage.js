@@ -7,6 +7,7 @@ export default function StudentPage() {
   const { auth } = useContext(AuthContext);
 
   const [courses, setCourses] = useState([]);
+  const [enrolledCourses, setEnrolledCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -17,12 +18,15 @@ export default function StudentPage() {
           headers: { Authorization: `Bearer ${auth?.token}` },
         });
 
-        // Filter only published courses for students
         const publishedCourses = res.data.courses.filter(
           (course) => course.status === "published"
         );
-
         setCourses(publishedCourses);
+
+        const enrolled = publishedCourses.filter((course) =>
+          course.students?.includes(auth.user._id)
+        );
+        setEnrolledCourses(enrolled);
       } catch (err) {
         setError("Failed to load courses");
       } finally {
@@ -31,7 +35,7 @@ export default function StudentPage() {
     };
 
     if (auth?.token && auth?.user?.role === "student") fetchCourses();
-  }, [auth?.token, auth?.user?.role]);
+  }, [auth?.token, auth?.user?.role, auth.user._id]);
 
   const isNew = (date) => {
     const created = new Date(date);
@@ -40,51 +44,122 @@ export default function StudentPage() {
     return diffDays <= 3;
   };
 
-  if (loading) return <p>Loading courses...</p>;
-  if (error) return <p className="text-danger">{error}</p>;
+  if (loading)
+    return (
+      <p className="text-center mt-10 text-gray-600">Loading courses...</p>
+    );
+
+  if (error)
+    return (
+      <p className="text-center mt-10 text-red-600 font-medium">{error}</p>
+    );
 
   return (
-    <div className="container mt-4 text-center">
-      <h3>Student Dashboard</h3>
-      <p>Welcome! You can browse and enroll in courses.</p>
+    <div className="max-w-6xl mx-auto px-4 mt-8 space-y-8">
+      {/* Header */}
+      <div className="text-center space-y-2">
+        <h3 className="text-3xl font-bold text-gray-800">Student Dashboard</h3>
+        <p className="text-gray-600">
+          Welcome! Browse, enroll, and manage your courses.
+        </p>
+      </div>
 
-      <div className="mt-3 mb-4">
-        <Link to="/student/courses" className="btn btn-primary me-2">
-          View All Courses
+      {/* Quick Actions */}
+      <div className="flex flex-wrap justify-center gap-4">
+        {/* Redirect to CourseList page */}
+        <Link
+          to="/courses"
+          className="px-5 py-3 bg-blue-200 text-blue-800 rounded-lg shadow hover:bg-blue-300 transition font-medium"
+        >
+          Explore Courses
         </Link>
 
-        <Link to="/student/my-courses" className="btn btn-success me-2">
-          My Courses
+        <Link
+          to="/student/my-courses"
+          className="px-5 py-3 bg-green-200 text-green-800 rounded-lg shadow hover:bg-green-300 transition font-medium"
+        >
+          View My Courses
+        </Link>
+
+        <Link
+          to="/student/certificates"
+          className="px-5 py-3 bg-purple-200 text-purple-800 rounded-lg shadow hover:bg-purple-300 transition font-medium"
+        >
+          My Certificates
         </Link>
 
         <Link
           to="/student/consultations"
-          className="btn btn-info"
+          className="px-5 py-3 bg-indigo-200 text-indigo-800 rounded-lg shadow hover:bg-indigo-300 transition font-medium"
         >
-          My Consultations
+          Manage Consultations
         </Link>
+
+       {/* 🔹 NEW: Learning Stats button */}
+        <Link
+          to="/student/stats"
+          className="px-5 py-3 bg-orange-200 text-orange-800 rounded-lg shadow hover:bg-orange-300 transition font-medium"
+        >
+          Learning Stats &amp; Analytics
+        </Link>
+
       </div>
 
-      <h4>Recent Announcements</h4>
-      {courses.length === 0 && <p>No courses available</p>}
-      <ul className="list-group">
-        {courses.map((course) =>
-          course.announcements?.map((a) => (
-            <li
-              key={a._id}
-              className="list-group-item d-flex justify-content-between align-items-center"
-            >
-              <div>
-                <strong>{course.title}:</strong> {a.content}
-              </div>
-              {isNew(a.createdAt) && (
-                <span className="badge bg-warning">New</span>
-              )}
-            </li>
-          ))
+      {/* Enrolled Courses */}
+      {enrolledCourses.length > 0 && (
+        <div className="space-y-4 mt-6">
+          <h4 className="text-xl font-semibold text-gray-800">
+            My Enrolled Courses
+          </h4>
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {enrolledCourses.map((course) => (
+              <Link
+                key={course._id}
+                to={`/student/my-courses/${course._id}`}
+                className="bg-white p-4 rounded-xl shadow-md border hover:shadow-lg transition flex flex-col justify-between"
+              >
+                <h5 className="font-semibold text-gray-800 mb-2">
+                  {course.title}
+                </h5>
+                <p className="text-gray-600 text-sm">
+                  {course.description?.slice(0, 80)}...
+                </p>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Recent Announcements */}
+      <div className="space-y-4 mt-6">
+        <h4 className="text-xl font-semibold text-gray-800">
+          Recent Announcements
+        </h4>
+
+        {courses.length === 0 && (
+          <p className="text-gray-500">No courses available</p>
         )}
-      </ul>
+
+        <div className="grid md:grid-cols-2 gap-4">
+          {courses.map((course) =>
+            course.announcements?.map((a) => (
+              <div
+                key={a._id}
+                className="bg-white p-4 rounded-xl shadow-md border flex justify-between items-start hover:shadow-lg transition"
+              >
+                <div className="text-gray-700">
+                  <strong>{course.title}:</strong> {a.content}
+                </div>
+                {isNew(a.createdAt) && (
+                  <span className="ml-3 px-2 py-1 text-xs font-semibold bg-yellow-400 text-black rounded-full">
+                    New
+                  </span>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      </div>
     </div>
   );
 }
-

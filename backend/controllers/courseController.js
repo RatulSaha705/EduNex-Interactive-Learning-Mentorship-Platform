@@ -1,6 +1,10 @@
 import Course from "../models/Course.js";
 import User from "../models/User.js";
 import Notification from "../models/Notification.js";
+// backend/controllers/courseController.js
+import { issueCertificateOnCourseCompletion } from "./certificateController.js";
+import LearningActivity from "../models/LearningActivity.js";
+
 // ----------------- INSTRUCTOR ----------------- //
 
 // ----------------- INSTRUCTOR -----------------
@@ -253,13 +257,17 @@ export const getMyCourses = async (req, res) => {
   }
 };
 
+// backend/controllers/courseController.js
+
 export const completeLesson = async (req, res) => {
   try {
     const { courseId, lessonId } = req.params;
     const studentId = req.user.id;
 
     const course = await Course.findById(courseId);
-    if (!course) return res.status(404).json({ message: "Course not found" });
+    if (!course) {
+      return res.status(404).json({ message: "Course not found" });
+    }
 
     let studentProgress = course.completedLessons.find(
       (cl) => cl.student.toString() === studentId
@@ -270,18 +278,61 @@ export const completeLesson = async (req, res) => {
       course.completedLessons.push(studentProgress);
     }
 
+    let newlyCompleted = false;
+
     if (!studentProgress.lessons.includes(lessonId)) {
       studentProgress.lessons.push(lessonId);
+      newlyCompleted = true;
       await course.save();
+
+      // 🔹 NEW: record learning activity for this completed lesson
+      try {
+        await LearningActivity.findOneAndUpdate(
+          {
+            student: studentId,
+            course: courseId,
+            lesson: lessonId,
+            activityType: "lesson_completed",
+          },
+          {
+            $setOnInsert: {
+              completedAt: new Date(),
+              // You can adjust default duration if you want
+              durationMinutes: 15,
+            },
+          },
+          { upsert: true, new: true }
+        );
+      } catch (activityErr) {
+        console.error(
+          "Failed to record learning activity:",
+          activityErr.message
+        );
+      }
     }
 
-    const progress = Math.floor(
-      (studentProgress.lessons.length / course.lessons.length) * 100
-    );
+    const totalLessons = course.lessons.length || 1;
+    const completedCount = studentProgress.lessons.length;
+    const progress = Math.floor((completedCount / totalLessons) * 100);
 
-    res.json({ message: "Lesson marked as completed", progress });
+    // 🔹 certificate: generate when 100% complete
+    let certificate = null;
+    if (progress === 100) {
+      certificate = await issueCertificateOnCourseCompletion(
+        course,
+        studentId
+      );
+    }
+
+    res.json({
+      message: newlyCompleted
+        ? "Lesson marked as completed"
+        : "Lesson already completed",
+      progress,
+      certificate,
+    });
   } catch (error) {
-    console.error(error);
+    console.error("Error in completeLesson:", error);
     res.status(500).json({ message: error.message });
   }
 };
