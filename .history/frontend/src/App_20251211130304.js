@@ -27,16 +27,15 @@ import CourseDiscussion from "./pages/CourseDiscussion";
 import AddLesson from "./pages/AddLesson";
 import CourseList from "./pages/CourseList";
 import InstructorCourseDetails from "./pages/InstructorCourseDetails";
+// ✨ Added imports
 import LearningStats from "./pages/LearningStats";
-import AdminReports from "./pages/AdminReports";
+import AdminReports from "./pages/AdminReports"; // ← new import
 import StudentMyConsultations from "./pages/StudentMyConsultations";
 import StudentConsultationBooking from "./pages/StudentConsultationBooking";
 import InstructorConsultationSchedule from "./pages/InstructorConsultationSchedule";
 import InstructorTodayConsultations from "./pages/InstructorTodayConsultations";
 import NotificationsPage from "./pages/NotificationsPage";
-import RecommendedCourses from "./pages/RecommendedCourses"; // ✅ added
 
-/* -------------------------------------------------- */
 function App() {
   const { auth, logout } = useContext(AuthContext);
 
@@ -49,8 +48,118 @@ function App() {
 
   return (
     <BrowserRouter>
-      <Navigation />
+      <Navigation auth={auth} logout={logout} />
+      <Routes>
+        {/* Public Routes */}
+        <Route
+          path="/"
+          element={!auth.user ? <Login /> : <Navigate to="/profile" />}
+        />
+        <Route
+          path="/register"
+          element={!auth.user ? <Register /> : <Navigate to="/profile" />}
+        />
 
+        {/* Protected Routes */}
+        <Route
+          path="/profile"
+          element={auth.user ? <Profile /> : <Navigate to="/" />}
+        />
+
+        <Route
+          path="/student"
+          element={
+            auth.user?.role === "student" ? (
+              <StudentPage />
+            ) : (
+              <Navigate to="/" />
+            )
+          }
+        />
+
+        {/* Updated route: student courses now shows CourseList */}
+        <Route
+          path="/student/courses"
+          element={
+            auth.user?.role === "student" ? <CourseList /> : <Navigate to="/" />
+          }
+        />
+
+        <Route path="/student/courses/:id" element={<CourseDetails />} />
+        <Route path="/student/my-courses" element={<MyCourses />} />
+
+        <Route
+          path="/instructor"
+          element={
+            auth.user?.role === "instructor" ? (
+              <InstructorPage />
+            ) : (
+              <Navigate to="/" />
+            )
+          }
+        />
+        <Route
+          path="/instructor/create-course"
+          element={
+            auth.user?.role === "instructor" ? (
+              <CreateCourse />
+            ) : (
+              <Navigate to="/" />
+            )
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            auth.user?.role === "admin" ? <AdminPage /> : <Navigate to="/" />
+          }
+        />
+
+        {/* New route for Admin: Report Management */}
+        <Route
+          path="/admin/reports"
+          element={
+            auth.user?.role === "admin" ? <AdminReports /> : <Navigate to="/" />
+          }
+        />
+
+        <Route
+          path="/instructor/course/:id/edit"
+          element={
+            auth.user?.role === "instructor" ? (
+              <EditCourse />
+            ) : (
+              <Navigate to="/" />
+            )
+          }
+        />
+        <Route path="/courses" element={<CourseList />} />
+        <Route path="/courses/:courseId/add-lesson" element={<AddLesson />} />
+
+        <Route path="*" element={<Navigate to="/" />} />
+
+        <Route
+          path="/instructor/courses/:id"
+          element={<InstructorCourseDetails />}
+        />
+        <Route
+          path="/instructor/courses/:id/add-lesson"
+          element={<AddLesson />}
+        />
+
+        {/* 🌟 New route for LearningStats */}
+        <Route
+          path="/student/learning-stats"
+          element={
+            auth.user?.role === "student" ? (
+              <LearningStats />
+            ) : (
+              <Navigate to="/" />
+            )
+          }
+        />
+      </Routes>
+      <Navigation />
       <div className="max-w-7xl mx-auto px-4 pt-20">
         <Routes>
           {/* Public Routes */}
@@ -60,7 +169,6 @@ function App() {
               !auth.user ? <Login /> : <Navigate to={getDashboardRoute()} />
             }
           />
-
           <Route
             path="/register"
             element={
@@ -74,7 +182,7 @@ function App() {
             element={auth.user ? <Profile /> : <Navigate to="/" />}
           />
 
-          {/* Student Dashboard */}
+          {/* Student */}
           <Route
             path="/student"
             element={
@@ -85,8 +193,6 @@ function App() {
               )
             }
           />
-
-          {/* Student Courses */}
           <Route
             path="/student/courses"
             element={
@@ -97,23 +203,8 @@ function App() {
               )
             }
           />
-
           <Route path="/student/courses/:id" element={<CourseDetails />} />
           <Route path="/student/my-courses" element={<MyCourses />} />
-
-          {/* Recommended Courses */}
-          <Route
-            path="/student/recommended-courses"
-            element={
-              auth.user?.role === "student" ? (
-                <RecommendedCourses />
-              ) : (
-                <Navigate to="/" />
-              )
-            }
-          />
-
-          {/* Student Consultations */}
           <Route
             path="/student/consultations"
             element={<StudentMyConsultations />}
@@ -121,18 +212,6 @@ function App() {
           <Route
             path="/student/courses/:id/consultation"
             element={<StudentConsultationBooking />}
-          />
-
-          {/* STUDENT LEARNING STATS */}
-          <Route
-            path="/student/learning-stats"
-            element={
-              auth.user?.role === "student" ? (
-                <LearningStats />
-              ) : (
-                <Navigate to="/" />
-              )
-            }
           />
 
           {/* Instructor */}
@@ -146,32 +225,26 @@ function App() {
               )
             }
           />
-
           <Route path="/instructor/create-course" element={<CreateCourse />} />
-
           <Route
             path="/instructor/consultations/schedule"
             element={<InstructorConsultationSchedule />}
           />
-
           <Route
             path="/instructor/consultations/today"
             element={<InstructorTodayConsultations />}
           />
-
           <Route
             path="/instructor/courses/:id"
             element={<InstructorCourseDetails />}
           />
-
           <Route path="/instructor/course/:id/edit" element={<EditCourse />} />
-
           <Route
             path="/instructor/courses/:id/add-lesson"
             element={<AddLesson />}
           />
 
-          {/* Discussion Board */}
+          {/* Discussion */}
           <Route
             path="/student/courses/:id/discussion"
             element={<CourseDiscussion />}
@@ -181,7 +254,7 @@ function App() {
             element={<CourseDiscussion />}
           />
 
-          {/* General Course List */}
+          {/* General */}
           <Route path="/courses" element={<CourseList />} />
 
           {/* Notifications */}
@@ -198,18 +271,6 @@ function App() {
             }
           />
 
-          {/* ADMIN ONLY REPORTS */}
-          <Route
-            path="/admin/reports"
-            element={
-              auth.user?.role === "admin" ? (
-                <AdminReports />
-              ) : (
-                <Navigate to="/" />
-              )
-            }
-          />
-
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
@@ -218,9 +279,7 @@ function App() {
   );
 }
 
-/* -------------------------------------------------- */
-/* ------------------- NAVBAR ------------------------ */
-/* -------------------------------------------------- */
+/* ---------------- NAVIGATION ---------------- */
 function Navigation() {
   const { auth, logout } = useContext(AuthContext);
   const navigate = useNavigate();
@@ -243,116 +302,82 @@ function Navigation() {
         </button>
 
         <div
-          className={`md:flex md:items-center md:space-x-4 ${
+          className={`md:flex md:items-center space-y-2 md:space-y-0 md:space-x-3 ${
             menuOpen ? "block" : "hidden"
           }`}
         >
-          {/* Guest */}
           {!auth.user && (
             <>
               <Link
                 to="/register"
-                className="px-4 py-2 bg-white text-blue-700 font-semibold rounded hover:bg-gray-100"
+                className="px-4 py-2 bg-white text-indigo-700 font-semibold rounded hover:bg-gray-100 transition"
               >
                 Register
               </Link>
 
               <Link
                 to="/"
-                className="px-4 py-2 bg-yellow-400 text-black font-semibold rounded hover:bg-yellow-300"
+                className="px-4 py-2 bg-yellow-400 text-black font-semibold rounded hover:bg-yellow-300 transition"
               >
                 Login
               </Link>
             </>
           )}
 
-          {/* Logged In */}
           {auth.user && (
             <>
               <Link
                 to="/profile"
-                className="px-4 py-2 bg-white text-indigo-700 font-semibold rounded hover:bg-gray-100"
+                className="px-4 py-2 bg-white text-indigo-700 font-semibold rounded hover:bg-gray-100 transition"
               >
                 Profile
               </Link>
 
-              {/* STUDENT LINKS */}
               {auth.user.role === "student" && (
-                <>
-                  <Link
-                    to="/student"
-                    className="px-4 py-2 bg-yellow-400 text-black rounded font-semibold"
-                  >
-                    Dashboard
-                  </Link>
-
-                  <Link
-                    to="/student/learning-stats"
-                    className="px-4 py-2 bg-purple-500 text-white rounded font-semibold"
-                  >
-                    Learning Stats
-                  </Link>
-
-                  {/* Recommended Courses Link */}
-                  <Link
-                    to="/student/recommended-courses"
-                    className="px-4 py-2 bg-pink-500 text-white rounded font-semibold"
-                  >
-                    Recommended Courses
-                  </Link>
-                </>
+                <Link
+                  to="/student"
+                  className="px-4 py-2 bg-yellow-500 text-black rounded font-semibold"
+                >
+                  Dashboard
+                </Link>
               )}
 
-              {/* INSTRUCTOR LINKS */}
               {auth.user.role === "instructor" && (
                 <>
                   <Link
                     to="/instructor"
-                    className="px-4 py-2 bg-yellow-400 text-black rounded font-semibold"
+                    className="px-4 py-2 bg-yellow-500 text-black rounded font-semibold"
                   >
                     Dashboard
                   </Link>
 
                   <Link
                     to="/instructor/consultations/schedule"
-                    className="px-4 py-2 bg-blue-600 text-white rounded font-semibold"
+                    className="px-4 py-2 bg-blue-500 text-white rounded font-semibold"
                   >
                     Manage Consultations
                   </Link>
 
                   <Link
                     to="/instructor/consultations/today"
-                    className="px-4 py-2 bg-green-600 text-white rounded font-semibold"
+                    className="px-4 py-2 bg-green-500 text-white rounded font-semibold"
                   >
-                    Today's Sessions
+                    Today's Consultations
                   </Link>
                 </>
               )}
 
-              {/* ADMIN LINKS */}
               {auth.user.role === "admin" && (
-                <>
-                  <Link
-                    to="/admin"
-                    className="px-4 py-2 bg-red-500 text-white rounded font-semibold"
-                  >
-                    Admin Panel
-                  </Link>
-
-                  <Link
-                    to="/admin/reports"
-                    className="px-4 py-2 bg-orange-500 text-white rounded font-semibold"
-                  >
-                    Reports
-                  </Link>
-                </>
+                <Link to="/admin" className="px-4 py-2 bg-red-500 rounded">
+                  Admin
+                </Link>
               )}
 
               <NotificationsDropdown />
 
               <button
                 onClick={handleLogout}
-                className="px-4 py-2 bg-gray-800 text-white rounded hover:bg-gray-700"
+                className="px-4 py-2 bg-gray-700 rounded"
               >
                 Logout
               </button>

@@ -3,7 +3,7 @@ import Course from "../models/Course.js";
 import Enrollment from "../models/Enrollment.js";
 
 /**
- * Recommend courses based on student's most enrolled categories
+ * Recommend courses based on student's enrolled course categories
  */
 export const getMyCourseRecommendations = async (req, res) => {
   try {
@@ -19,8 +19,8 @@ export const getMyCourseRecommendations = async (req, res) => {
       .map((e) => e.course?.category)
       .filter(Boolean);
 
+    // fallback if no enrollments
     if (!enrolledCategories.length) {
-      // Fallback: return popular courses if no enrollments
       const popularCourses = await Course.find({ status: "published" }).limit(
         limit
       );
@@ -33,24 +33,34 @@ export const getMyCourseRecommendations = async (req, res) => {
       categoryCount[cat] = (categoryCount[cat] || 0) + 1;
     });
 
-    // Find the most enrolled category (highest frequency)
-    const maxCount = Math.max(...Object.values(categoryCount));
-    const topCategories = Object.keys(categoryCount).filter(
-      (cat) => categoryCount[cat] === maxCount
+    // Sort categories by frequency
+    const sortedCategories = Object.keys(categoryCount).sort(
+      (a, b) => categoryCount[b] - categoryCount[a]
     );
 
-    // 2. Candidate courses: published, not already enrolled, and in top categories
+    // 2. Candidate courses: published and not already enrolled
     const enrolledCourseIds = new Set(
       myEnrollments.map((e) => String(e.course._id))
     );
-
     const candidates = await Course.find({
       _id: { $nin: Array.from(enrolledCourseIds) },
       status: "published",
-      category: { $in: topCategories }, // only courses from top categories
     }).lean();
 
-    res.json(candidates.slice(0, limit));
+    // 3. Score candidates based on matching categories
+    const scored = candidates
+      .map((course) => {
+        const categoryIndex = sortedCategories.indexOf(course.category);
+        if (categoryIndex === -1) return null; // skip non-matching categories
+        const score = sortedCategories.length - categoryIndex;
+        return { ...course, score };
+      })
+      .filter(Boolean); // remove nulls
+
+    // 4. Sort by score descending and return top N
+    scored.sort((a, b) => b.score - a.score);
+
+    res.json(scored.slice(0, limit));
   } catch (err) {
     console.error("Error in getMyCourseRecommendations:", err);
     res.status(500).json({

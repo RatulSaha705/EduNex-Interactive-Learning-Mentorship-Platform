@@ -34,7 +34,6 @@ import StudentConsultationBooking from "./pages/StudentConsultationBooking";
 import InstructorConsultationSchedule from "./pages/InstructorConsultationSchedule";
 import InstructorTodayConsultations from "./pages/InstructorTodayConsultations";
 import NotificationsPage from "./pages/NotificationsPage";
-import RecommendedCourses from "./pages/RecommendedCourses"; // ✅ added
 
 /* -------------------------------------------------- */
 function App() {
@@ -100,18 +99,6 @@ function App() {
 
           <Route path="/student/courses/:id" element={<CourseDetails />} />
           <Route path="/student/my-courses" element={<MyCourses />} />
-
-          {/* Recommended Courses */}
-          <Route
-            path="/student/recommended-courses"
-            element={
-              auth.user?.role === "student" ? (
-                <RecommendedCourses />
-              ) : (
-                <Navigate to="/" />
-              )
-            }
-          />
 
           {/* Student Consultations */}
           <Route
@@ -291,14 +278,6 @@ function Navigation() {
                     className="px-4 py-2 bg-purple-500 text-white rounded font-semibold"
                   >
                     Learning Stats
-                  </Link>
-
-                  {/* Recommended Courses Link */}
-                  <Link
-                    to="/student/recommended-courses"
-                    className="px-4 py-2 bg-pink-500 text-white rounded font-semibold"
-                  >
-                    Recommended Courses
                   </Link>
                 </>
               )}

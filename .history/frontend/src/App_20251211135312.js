@@ -20,6 +20,7 @@ import CreateCourse from "./components/CreateCourse";
 import { AuthContext } from "./context/AuthContext";
 import NotificationsDropdown from "./components/NotificationsDropdown";
 
+// Pages
 import CourseDetails from "./pages/CourseDetails";
 import MyCourses from "./pages/MyCourses";
 import EditCourse from "./pages/EditCourse";
@@ -27,14 +28,13 @@ import CourseDiscussion from "./pages/CourseDiscussion";
 import AddLesson from "./pages/AddLesson";
 import CourseList from "./pages/CourseList";
 import InstructorCourseDetails from "./pages/InstructorCourseDetails";
-import LearningStats from "./pages/LearningStats";
-import AdminReports from "./pages/AdminReports";
+import LearningStats from "./pages/LearningStats"; // FIXED
+import AdminReports from "./pages/AdminReports"; // FIXED
 import StudentMyConsultations from "./pages/StudentMyConsultations";
 import StudentConsultationBooking from "./pages/StudentConsultationBooking";
 import InstructorConsultationSchedule from "./pages/InstructorConsultationSchedule";
 import InstructorTodayConsultations from "./pages/InstructorTodayConsultations";
 import NotificationsPage from "./pages/NotificationsPage";
-import RecommendedCourses from "./pages/RecommendedCourses"; // ✅ added
 
 /* -------------------------------------------------- */
 function App() {
@@ -53,7 +53,7 @@ function App() {
 
       <div className="max-w-7xl mx-auto px-4 pt-20">
         <Routes>
-          {/* Public Routes */}
+          {/* Public */}
           <Route
             path="/"
             element={
@@ -74,7 +74,7 @@ function App() {
             element={auth.user ? <Profile /> : <Navigate to="/" />}
           />
 
-          {/* Student Dashboard */}
+          {/* STUDENT */}
           <Route
             path="/student"
             element={
@@ -86,7 +86,6 @@ function App() {
             }
           />
 
-          {/* Student Courses */}
           <Route
             path="/student/courses"
             element={
@@ -101,41 +100,17 @@ function App() {
           <Route path="/student/courses/:id" element={<CourseDetails />} />
           <Route path="/student/my-courses" element={<MyCourses />} />
 
-          {/* Recommended Courses */}
-          <Route
-            path="/student/recommended-courses"
-            element={
-              auth.user?.role === "student" ? (
-                <RecommendedCourses />
-              ) : (
-                <Navigate to="/" />
-              )
-            }
-          />
-
-          {/* Student Consultations */}
           <Route
             path="/student/consultations"
             element={<StudentMyConsultations />}
           />
+
           <Route
             path="/student/courses/:id/consultation"
             element={<StudentConsultationBooking />}
           />
 
-          {/* STUDENT LEARNING STATS */}
-          <Route
-            path="/student/learning-stats"
-            element={
-              auth.user?.role === "student" ? (
-                <LearningStats />
-              ) : (
-                <Navigate to="/" />
-              )
-            }
-          />
-
-          {/* Instructor */}
+          {/* INSTRUCTOR */}
           <Route
             path="/instructor"
             element={
@@ -171,26 +146,27 @@ function App() {
             element={<AddLesson />}
           />
 
-          {/* Discussion Board */}
+          {/* DISCUSSION */}
           <Route
             path="/student/courses/:id/discussion"
             element={<CourseDiscussion />}
           />
+
           <Route
             path="/instructor/courses/:id/discussion"
             element={<CourseDiscussion />}
           />
 
-          {/* General Course List */}
+          {/* GLOBAL COURSE LIST */}
           <Route path="/courses" element={<CourseList />} />
 
-          {/* Notifications */}
+          {/* NOTIFICATIONS */}
           <Route
             path="/notifications"
             element={auth.user ? <NotificationsPage /> : <Navigate to="/" />}
           />
 
-          {/* Admin */}
+          {/* ADMIN */}
           <Route
             path="/admin"
             element={
@@ -198,7 +174,11 @@ function App() {
             }
           />
 
-          {/* ADMIN ONLY REPORTS */}
+          <Route
+            path="/learning-stats"
+            element={auth.user ? <LearningStats /> : <Navigate to="/" />}
+          />
+
           <Route
             path="/admin/reports"
             element={
@@ -210,7 +190,7 @@ function App() {
             }
           />
 
-          {/* Fallback */}
+          {/* DEFAULT */}
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </div>
@@ -219,7 +199,7 @@ function App() {
 }
 
 /* -------------------------------------------------- */
-/* ------------------- NAVBAR ------------------------ */
+/* -------------------- NAVBAR ----------------------- */
 /* -------------------------------------------------- */
 function Navigation() {
   const { auth, logout } = useContext(AuthContext);
@@ -247,63 +227,46 @@ function Navigation() {
             menuOpen ? "block" : "hidden"
           }`}
         >
-          {/* Guest */}
+          {/* NOT LOGGED IN */}
           {!auth.user && (
             <>
               <Link
                 to="/register"
-                className="px-4 py-2 bg-white text-blue-700 font-semibold rounded hover:bg-gray-100"
+                className="px-4 py-2 bg-white text-blue-700 font-semibold rounded hover:bg-gray-100 transition"
               >
                 Register
               </Link>
 
               <Link
                 to="/"
-                className="px-4 py-2 bg-yellow-400 text-black font-semibold rounded hover:bg-yellow-300"
+                className="px-4 py-2 bg-yellow-400 text-black font-semibold rounded hover:bg-yellow-300 transition"
               >
                 Login
               </Link>
             </>
           )}
 
-          {/* Logged In */}
+          {/* LOGGED IN */}
           {auth.user && (
             <>
               <Link
                 to="/profile"
-                className="px-4 py-2 bg-white text-indigo-700 font-semibold rounded hover:bg-gray-100"
+                className="px-4 py-2 bg-white text-indigo-700 font-semibold rounded hover:bg-gray-100 transition"
               >
                 Profile
               </Link>
 
-              {/* STUDENT LINKS */}
+              {/* STUDENT */}
               {auth.user.role === "student" && (
-                <>
-                  <Link
-                    to="/student"
-                    className="px-4 py-2 bg-yellow-400 text-black rounded font-semibold"
-                  >
-                    Dashboard
-                  </Link>
-
-                  <Link
-                    to="/student/learning-stats"
-                    className="px-4 py-2 bg-purple-500 text-white rounded font-semibold"
-                  >
-                    Learning Stats
-                  </Link>
-
-                  {/* Recommended Courses Link */}
-                  <Link
-                    to="/student/recommended-courses"
-                    className="px-4 py-2 bg-pink-500 text-white rounded font-semibold"
-                  >
-                    Recommended Courses
-                  </Link>
-                </>
+                <Link
+                  to="/student"
+                  className="px-4 py-2 bg-yellow-400 text-black font-semibold rounded"
+                >
+                  Dashboard
+                </Link>
               )}
 
-              {/* INSTRUCTOR LINKS */}
+              {/* INSTRUCTOR */}
               {auth.user.role === "instructor" && (
                 <>
                   <Link
@@ -329,7 +292,7 @@ function Navigation() {
                 </>
               )}
 
-              {/* ADMIN LINKS */}
+              {/* ADMIN */}
               {auth.user.role === "admin" && (
                 <>
                   <Link
@@ -340,8 +303,15 @@ function Navigation() {
                   </Link>
 
                   <Link
+                    to="/learning-stats"
+                    className="px-4 py-2 bg-purple-600 text-white rounded font-semibold"
+                  >
+                    Learning Stats
+                  </Link>
+
+                  <Link
                     to="/admin/reports"
-                    className="px-4 py-2 bg-orange-500 text-white rounded font-semibold"
+                    className="px-4 py-2 bg-indigo-600 text-white rounded font-semibold"
                   >
                     Reports
                   </Link>

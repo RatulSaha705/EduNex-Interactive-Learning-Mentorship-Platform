@@ -1,5 +1,6 @@
 // src/pages/RecommendedCourses.js
 import React, { useEffect, useState, useContext } from "react";
+import { courseController } from "../controllers/courseController"; // optional, or axios directly
 import { AuthContext } from "../context/AuthContext";
 import Card from "../components/Card";
 import axios from "axios";
@@ -49,15 +50,11 @@ export default function RecommendedCourses() {
       <h3>Recommended For You</h3>
       <div className="row">
         {recommended.map((course) => (
-          <div className="col-md-4 mb-3" key={course._id || Math.random()}>
+          <div className="col-md-4 mb-3" key={course._id}>
             <Card style={{ height: "100%" }}>
               <h5>{course.title}</h5>
-              <p>
-                {course.description
-                  ? course.description.slice(0, 100) + "…"
-                  : ""}
-              </p>
-              <p>Category: {course.category || "N/A"}</p>
+              <p>{course.description?.slice(0, 100) + "…"}</p>
+              <p>Category: {course.category}</p>
               <a
                 href={`/courses/${course._id}`}
                 className="btn btn-primary btn-sm"
