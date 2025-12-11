@@ -13,6 +13,7 @@ import { useContext, useState } from "react";
 import Register from "./components/Register";
 import Login from "./components/Login";
 import Profile from "./components/Profile";
+import ViewProfile from "./components/ViewProfile";
 import StudentPage from "./components/StudentPage";
 import InstructorPage from "./components/InstructorPage";
 import AdminPage from "./components/AdminPage";
@@ -36,13 +37,6 @@ import NotificationsPage from "./pages/NotificationsPage";
 function App() {
   const { auth } = useContext(AuthContext);
 
-  const getDashboardRoute = () => {
-    if (auth.user?.role === "student") return "/student";
-    if (auth.user?.role === "instructor") return "/instructor";
-    if (auth.user?.role === "admin") return "/admin";
-    return "/";
-  };
-
   return (
     <BrowserRouter>
       <Navigation />
@@ -51,24 +45,24 @@ function App() {
           {/* Public Routes */}
           <Route
             path="/"
-            element={
-              !auth.user ? <Login /> : <Navigate to={getDashboardRoute()} />
-            }
+            element={!auth.user ? <Login /> : <Navigate to="/profile" />}
           />
           <Route
             path="/register"
-            element={
-              !auth.user ? <Register /> : <Navigate to={getDashboardRoute()} />
-            }
+            element={!auth.user ? <Register /> : <Navigate to="/profile" />}
           />
 
-          {/* Profile */}
+          {/* Protected Routes */}
           <Route
             path="/profile"
             element={auth.user ? <Profile /> : <Navigate to="/" />}
           />
+          <Route
+            path="/profile/view"
+            element={auth.user ? <ViewProfile /> : <Navigate to="/" />}
+          />
 
-          {/* Student */}
+          {/* Student Routes */}
           <Route
             path="/student"
             element={
@@ -93,14 +87,26 @@ function App() {
           <Route path="/student/my-courses" element={<MyCourses />} />
           <Route
             path="/student/consultations"
-            element={<StudentMyConsultations />}
+            element={
+              auth.user?.role === "student" ? (
+                <StudentMyConsultations />
+              ) : (
+                <Navigate to="/" />
+              )
+            }
           />
           <Route
             path="/student/courses/:id/consultation"
-            element={<StudentConsultationBooking />}
+            element={
+              auth.user?.role === "student" ? (
+                <StudentConsultationBooking />
+              ) : (
+                <Navigate to="/" />
+              )
+            }
           />
 
-          {/* Instructor */}
+          {/* Instructor Routes */}
           <Route
             path="/instructor"
             element={
@@ -111,26 +117,56 @@ function App() {
               )
             }
           />
-          <Route path="/instructor/create-course" element={<CreateCourse />} />
+          <Route
+            path="/instructor/create-course"
+            element={
+              auth.user?.role === "instructor" ? (
+                <CreateCourse />
+              ) : (
+                <Navigate to="/" />
+              )
+            }
+          />
           <Route
             path="/instructor/consultations/schedule"
-            element={<InstructorConsultationSchedule />}
+            element={
+              auth.user?.role === "instructor" ? (
+                <InstructorConsultationSchedule />
+              ) : (
+                <Navigate to="/" />
+              )
+            }
           />
           <Route
             path="/instructor/consultations/today"
-            element={<InstructorTodayConsultations />}
+            element={
+              auth.user?.role === "instructor" ? (
+                <InstructorTodayConsultations />
+              ) : (
+                <Navigate to="/" />
+              )
+            }
           />
           <Route
             path="/instructor/courses/:id"
             element={<InstructorCourseDetails />}
           />
-          <Route path="/instructor/course/:id/edit" element={<EditCourse />} />
+          <Route
+            path="/instructor/course/:id/edit"
+            element={
+              auth.user?.role === "instructor" ? (
+                <EditCourse />
+              ) : (
+                <Navigate to="/" />
+              )
+            }
+          />
           <Route
             path="/instructor/courses/:id/add-lesson"
             element={<AddLesson />}
           />
 
-          {/* Discussion */}
+          {/* Discussion Routes */}
           <Route
             path="/student/courses/:id/discussion"
             element={<CourseDiscussion />}
@@ -140,7 +176,8 @@ function App() {
             element={<CourseDiscussion />}
           />
 
-          {/* General */}
+          {/* General Routes */}
+          <Route path="/courses/:courseId/add-lesson" element={<AddLesson />} />
           <Route path="/courses" element={<CourseList />} />
 
           {/* Notifications */}
@@ -165,7 +202,7 @@ function App() {
   );
 }
 
-/* ---------------- NAVIGATION ---------------- */
+// Responsive & Dynamic Navigation
 function Navigation() {
   const { auth, logout } = useContext(AuthContext);
   const navigate = useNavigate();
@@ -179,31 +216,59 @@ function Navigation() {
   return (
     <nav className="fixed top-0 w-full bg-gradient-to-r from-indigo-900 via-purple-800 to-pink-700 text-white shadow-lg z-50">
       <div className="max-w-7xl mx-auto px-4 flex justify-between items-center h-16">
-        <Link to="/" className="text-2xl font-bold hover:text-yellow-300">
+        {/* Logo */}
+        <Link
+          to="/"
+          className="text-2xl font-bold hover:text-yellow-300 transition"
+        >
           EduNex
         </Link>
 
-        <button onClick={() => setMenuOpen(!menuOpen)} className="md:hidden">
-          ☰
+        {/* Hamburger menu */}
+        <button
+          onClick={() => setMenuOpen(!menuOpen)}
+          className="md:hidden text-white focus:outline-none"
+        >
+          <svg
+            className="w-6 h-6"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            viewBox="0 0 24 24"
+          >
+            {menuOpen ? (
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            ) : (
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M4 6h16M4 12h16M4 18h16"
+              />
+            )}
+          </svg>
         </button>
 
+        {/* Menu Links */}
         <div
-          className={`md:flex md:items-center space-y-2 md:space-y-0 md:space-x-3 ${
-            menuOpen ? "block" : "hidden"
+          className={`flex-col md:flex md:flex-row md:items-center md:space-x-3 absolute md:static top-16 md:top-0 w-full md:w-auto bg-gradient-to-b from-indigo-900 via-purple-800 to-pink-700 md:bg-transparent transition-all duration-300 ${
+            menuOpen ? "flex" : "hidden"
           }`}
         >
           {!auth.user && (
             <>
               <Link
                 to="/register"
-                className="px-4 py-2 bg-white text-indigo-700 font-semibold rounded hover:bg-gray-100 transition"
+                className="block px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-center md:text-left transition"
               >
                 Register
               </Link>
-
               <Link
                 to="/"
-                className="px-4 py-2 bg-yellow-400 text-black font-semibold rounded hover:bg-yellow-300 transition"
+                className="block px-4 py-2 bg-green-600 hover:bg-green-700 rounded text-center md:text-left transition"
               >
                 Login
               </Link>
@@ -214,17 +279,23 @@ function Navigation() {
             <>
               <Link
                 to="/profile"
-                className="px-4 py-2 bg-white text-indigo-700 font-semibold rounded hover:bg-gray-100 transition"
+                className="block px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded text-center md:text-left transition"
               >
-                Profile
+                Edit Profile
+              </Link>
+              <Link
+                to="/profile/view"
+                className="block px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded text-center md:text-left transition"
+              >
+                View Profile
               </Link>
 
               {auth.user.role === "student" && (
                 <Link
                   to="/student"
-                  className="px-4 py-2 bg-yellow-500 text-black rounded font-semibold"
+                  className="block px-4 py-2 bg-yellow-500 text-black hover:bg-yellow-400 rounded font-semibold text-center md:text-left transition"
                 >
-                  Dashboard
+                  Student Dashboard
                 </Link>
               )}
 
@@ -232,21 +303,19 @@ function Navigation() {
                 <>
                   <Link
                     to="/instructor"
-                    className="px-4 py-2 bg-yellow-500 text-black rounded font-semibold"
+                    className="block px-4 py-2 bg-yellow-500 text-black hover:bg-yellow-400 rounded font-semibold text-center md:text-left transition"
                   >
-                    Dashboard
+                    Instructor Dashboard
                   </Link>
-
                   <Link
                     to="/instructor/consultations/schedule"
-                    className="px-4 py-2 bg-blue-500 text-white rounded font-semibold"
+                    className="block px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded text-center md:text-left transition"
                   >
                     Manage Consultations
                   </Link>
-
                   <Link
                     to="/instructor/consultations/today"
-                    className="px-4 py-2 bg-green-500 text-white rounded font-semibold"
+                    className="block px-4 py-2 bg-green-500 hover:bg-green-600 rounded text-center md:text-left transition"
                   >
                     Today's Consultations
                   </Link>
@@ -254,16 +323,18 @@ function Navigation() {
               )}
 
               {auth.user.role === "admin" && (
-                <Link to="/admin" className="px-4 py-2 bg-red-500 rounded">
-                  Admin
+                <Link
+                  to="/admin"
+                  className="block px-4 py-2 bg-red-500 hover:bg-red-600 rounded text-center md:text-left transition"
+                >
+                  Admin Dashboard
                 </Link>
               )}
 
               <NotificationsDropdown />
-
               <button
                 onClick={handleLogout}
-                className="px-4 py-2 bg-gray-700 rounded"
+                className="block px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded text-center md:text-left transition"
               >
                 Logout
               </button>

@@ -220,12 +220,20 @@ function Navigation() {
               </Link>
 
               {auth.user.role === "student" && (
-                <Link
-                  to="/student"
-                  className="px-4 py-2 bg-yellow-500 text-black rounded font-semibold"
-                >
-                  Dashboard
-                </Link>
+                <>
+                  <Link
+                    to="/student"
+                    className="px-4 py-2 bg-yellow-500 text-black rounded font-semibold"
+                  >
+                    Dashboard
+                  </Link>
+                  <Link
+                    to="/student/consultations"
+                    className="px-4 py-2 bg-blue-500 text-white rounded font-semibold"
+                  >
+                    My Consultations
+                  </Link>
+                </>
               )}
 
               {auth.user.role === "instructor" && (

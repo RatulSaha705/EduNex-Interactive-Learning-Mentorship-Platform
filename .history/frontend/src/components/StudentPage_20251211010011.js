@@ -23,6 +23,7 @@ export default function StudentPage() {
         );
         setCourses(publishedCourses);
 
+        // Filter enrolled courses for the logged-in student
         const enrolled = publishedCourses.filter((course) =>
           course.students?.includes(auth.user._id)
         );
@@ -54,6 +55,12 @@ export default function StudentPage() {
       <p className="text-center mt-10 text-red-600 font-medium">{error}</p>
     );
 
+  // Get new courses (published in last 7 days) that student hasn't enrolled in
+  const newCourses = courses.filter(
+    (course) =>
+      !course.students?.includes(auth.user._id) && isNew(course.createdAt)
+  );
+
   return (
     <div className="max-w-6xl mx-auto px-4 mt-8 space-y-8">
       {/* Header */}
@@ -66,9 +73,8 @@ export default function StudentPage() {
 
       {/* Quick Actions */}
       <div className="flex flex-wrap justify-center gap-4">
-        {/* Redirect to CourseList page */}
         <Link
-          to="/courses"
+          to="/student/courses"
           className="px-5 py-3 bg-blue-200 text-blue-800 rounded-lg shadow hover:bg-blue-300 transition font-medium"
         >
           Explore Courses
@@ -89,17 +95,45 @@ export default function StudentPage() {
         </Link>
       </div>
 
+      {/* New Courses */}
+      {newCourses.length > 0 && (
+        <div className="space-y-4">
+          <h4 className="text-xl font-semibold text-gray-800">New Courses</h4>
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {newCourses.map((course) => (
+              <Link
+                key={course._id}
+                to={`/student/courses/${course._id}`}
+                className="bg-white p-4 rounded-xl shadow-md border hover:shadow-lg transition flex flex-col justify-between"
+              >
+                <h5 className="font-semibold text-gray-800 mb-2">
+                  {course.title}
+                </h5>
+                <p className="text-gray-600 text-sm">
+                  {course.description?.slice(0, 80)}...
+                </p>
+                {isNew(course.createdAt) && (
+                  <span className="mt-2 px-2 py-1 text-xs font-semibold bg-yellow-400 text-black rounded-full">
+                    New
+                  </span>
+                )}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Enrolled Courses */}
       {enrolledCourses.length > 0 && (
-        <div className="space-y-4 mt-6">
+        <div className="space-y-4">
           <h4 className="text-xl font-semibold text-gray-800">
             My Enrolled Courses
           </h4>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {enrolledCourses.map((course) => (
+            {enrolledCourses.slice(0, 4).map((course) => (
               <Link
                 key={course._id}
-                to={`/student/my-courses/${course._id}`}
+                to={`/student/my-courses`}
                 className="bg-white p-4 rounded-xl shadow-md border hover:shadow-lg transition flex flex-col justify-between"
               >
                 <h5 className="font-semibold text-gray-800 mb-2">
@@ -115,7 +149,7 @@ export default function StudentPage() {
       )}
 
       {/* Recent Announcements */}
-      <div className="space-y-4 mt-6">
+      <div className="space-y-4">
         <h4 className="text-xl font-semibold text-gray-800">
           Recent Announcements
         </h4>

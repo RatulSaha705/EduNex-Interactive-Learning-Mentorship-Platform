@@ -23,6 +23,7 @@ export default function StudentPage() {
         );
         setCourses(publishedCourses);
 
+        // Filter enrolled courses for the logged-in student
         const enrolled = publishedCourses.filter((course) =>
           course.students?.includes(auth.user._id)
         );
@@ -64,11 +65,10 @@ export default function StudentPage() {
         </p>
       </div>
 
-      {/* Quick Actions */}
+      {/* Quick Actions (Main Buttons) */}
       <div className="flex flex-wrap justify-center gap-4">
-        {/* Redirect to CourseList page */}
         <Link
-          to="/courses"
+          to="/student/courses"
           className="px-5 py-3 bg-blue-200 text-blue-800 rounded-lg shadow hover:bg-blue-300 transition font-medium"
         >
           Explore Courses
@@ -89,17 +89,17 @@ export default function StudentPage() {
         </Link>
       </div>
 
-      {/* Enrolled Courses */}
+      {/* Enrolled Courses Preview */}
       {enrolledCourses.length > 0 && (
-        <div className="space-y-4 mt-6">
+        <div className="space-y-4">
           <h4 className="text-xl font-semibold text-gray-800">
             My Enrolled Courses
           </h4>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {enrolledCourses.map((course) => (
+            {enrolledCourses.slice(0, 4).map((course) => (
               <Link
                 key={course._id}
-                to={`/student/my-courses/${course._id}`}
+                to={`/student/my-courses`}
                 className="bg-white p-4 rounded-xl shadow-md border hover:shadow-lg transition flex flex-col justify-between"
               >
                 <h5 className="font-semibold text-gray-800 mb-2">
@@ -115,7 +115,7 @@ export default function StudentPage() {
       )}
 
       {/* Recent Announcements */}
-      <div className="space-y-4 mt-6">
+      <div className="space-y-4">
         <h4 className="text-xl font-semibold text-gray-800">
           Recent Announcements
         </h4>

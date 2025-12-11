@@ -79,16 +79,6 @@ function App() {
               )
             }
           />
-          <Route
-            path="/student/courses"
-            element={
-              auth.user?.role === "student" ? (
-                <CourseList />
-              ) : (
-                <Navigate to="/" />
-              )
-            }
-          />
           <Route path="/student/courses/:id" element={<CourseDetails />} />
           <Route path="/student/my-courses" element={<MyCourses />} />
           <Route
@@ -157,7 +147,6 @@ function App() {
             }
           />
 
-          {/* Fallback */}
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </div>
@@ -166,6 +155,7 @@ function App() {
 }
 
 /* ---------------- NAVIGATION ---------------- */
+
 function Navigation() {
   const { auth, logout } = useContext(AuthContext);
   const navigate = useNavigate();
@@ -194,6 +184,7 @@ function Navigation() {
         >
           {!auth.user && (
             <>
+              {/* ✅ FIXED REGISTER BUTTON */}
               <Link
                 to="/register"
                 className="px-4 py-2 bg-white text-indigo-700 font-semibold rounded hover:bg-gray-100 transition"
@@ -201,6 +192,7 @@ function Navigation() {
                 Register
               </Link>
 
+              {/* ✅ FIXED LOGIN BUTTON */}
               <Link
                 to="/"
                 className="px-4 py-2 bg-yellow-400 text-black font-semibold rounded hover:bg-yellow-300 transition"
@@ -212,6 +204,7 @@ function Navigation() {
 
           {auth.user && (
             <>
+              {/* FIXED PROFILE BUTTON */}
               <Link
                 to="/profile"
                 className="px-4 py-2 bg-white text-indigo-700 font-semibold rounded hover:bg-gray-100 transition"
@@ -229,28 +222,12 @@ function Navigation() {
               )}
 
               {auth.user.role === "instructor" && (
-                <>
-                  <Link
-                    to="/instructor"
-                    className="px-4 py-2 bg-yellow-500 text-black rounded font-semibold"
-                  >
-                    Dashboard
-                  </Link>
-
-                  <Link
-                    to="/instructor/consultations/schedule"
-                    className="px-4 py-2 bg-blue-500 text-white rounded font-semibold"
-                  >
-                    Manage Consultations
-                  </Link>
-
-                  <Link
-                    to="/instructor/consultations/today"
-                    className="px-4 py-2 bg-green-500 text-white rounded font-semibold"
-                  >
-                    Today's Consultations
-                  </Link>
-                </>
+                <Link
+                  to="/instructor"
+                  className="px-4 py-2 bg-yellow-500 text-black rounded font-semibold"
+                >
+                  Dashboard
+                </Link>
               )}
 
               {auth.user.role === "admin" && (

@@ -48,7 +48,6 @@ function App() {
       <Navigation />
       <div className="max-w-7xl mx-auto px-4 pt-20">
         <Routes>
-          {/* Public Routes */}
           <Route
             path="/"
             element={
@@ -62,13 +61,11 @@ function App() {
             }
           />
 
-          {/* Profile */}
           <Route
             path="/profile"
             element={auth.user ? <Profile /> : <Navigate to="/" />}
           />
 
-          {/* Student */}
           <Route
             path="/student"
             element={
@@ -79,85 +76,9 @@ function App() {
               )
             }
           />
-          <Route
-            path="/student/courses"
-            element={
-              auth.user?.role === "student" ? (
-                <CourseList />
-              ) : (
-                <Navigate to="/" />
-              )
-            }
-          />
-          <Route path="/student/courses/:id" element={<CourseDetails />} />
-          <Route path="/student/my-courses" element={<MyCourses />} />
-          <Route
-            path="/student/consultations"
-            element={<StudentMyConsultations />}
-          />
-          <Route
-            path="/student/courses/:id/consultation"
-            element={<StudentConsultationBooking />}
-          />
 
-          {/* Instructor */}
-          <Route
-            path="/instructor"
-            element={
-              auth.user?.role === "instructor" ? (
-                <InstructorPage />
-              ) : (
-                <Navigate to="/" />
-              )
-            }
-          />
-          <Route path="/instructor/create-course" element={<CreateCourse />} />
-          <Route
-            path="/instructor/consultations/schedule"
-            element={<InstructorConsultationSchedule />}
-          />
-          <Route
-            path="/instructor/consultations/today"
-            element={<InstructorTodayConsultations />}
-          />
-          <Route
-            path="/instructor/courses/:id"
-            element={<InstructorCourseDetails />}
-          />
-          <Route path="/instructor/course/:id/edit" element={<EditCourse />} />
-          <Route
-            path="/instructor/courses/:id/add-lesson"
-            element={<AddLesson />}
-          />
+          <Route path="/notifications" element={<NotificationsPage />} />
 
-          {/* Discussion */}
-          <Route
-            path="/student/courses/:id/discussion"
-            element={<CourseDiscussion />}
-          />
-          <Route
-            path="/instructor/courses/:id/discussion"
-            element={<CourseDiscussion />}
-          />
-
-          {/* General */}
-          <Route path="/courses" element={<CourseList />} />
-
-          {/* Notifications */}
-          <Route
-            path="/notifications"
-            element={auth.user ? <NotificationsPage /> : <Navigate to="/" />}
-          />
-
-          {/* Admin */}
-          <Route
-            path="/admin"
-            element={
-              auth.user?.role === "admin" ? <AdminPage /> : <Navigate to="/" />
-            }
-          />
-
-          {/* Fallback */}
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </div>
@@ -166,6 +87,7 @@ function App() {
 }
 
 /* ---------------- NAVIGATION ---------------- */
+
 function Navigation() {
   const { auth, logout } = useContext(AuthContext);
   const navigate = useNavigate();
@@ -194,6 +116,7 @@ function Navigation() {
         >
           {!auth.user && (
             <>
+              {/* ✅ FIXED REGISTER BUTTON */}
               <Link
                 to="/register"
                 className="px-4 py-2 bg-white text-indigo-700 font-semibold rounded hover:bg-gray-100 transition"
@@ -201,6 +124,7 @@ function Navigation() {
                 Register
               </Link>
 
+              {/* ✅ FIXED LOGIN BUTTON */}
               <Link
                 to="/"
                 className="px-4 py-2 bg-yellow-400 text-black font-semibold rounded hover:bg-yellow-300 transition"
@@ -214,56 +138,29 @@ function Navigation() {
             <>
               <Link
                 to="/profile"
-                className="px-4 py-2 bg-white text-indigo-700 font-semibold rounded hover:bg-gray-100 transition"
+                className="px-4 py-2 bg-white text-indigo-700 font-semibold rounded"
               >
                 Profile
               </Link>
 
-              {auth.user.role === "student" && (
-                <Link
-                  to="/student"
-                  className="px-4 py-2 bg-yellow-500 text-black rounded font-semibold"
-                >
-                  Dashboard
-                </Link>
-              )}
-
-              {auth.user.role === "instructor" && (
-                <>
-                  <Link
-                    to="/instructor"
-                    className="px-4 py-2 bg-yellow-500 text-black rounded font-semibold"
-                  >
-                    Dashboard
-                  </Link>
-
-                  <Link
-                    to="/instructor/consultations/schedule"
-                    className="px-4 py-2 bg-blue-500 text-white rounded font-semibold"
-                  >
-                    Manage Consultations
-                  </Link>
-
-                  <Link
-                    to="/instructor/consultations/today"
-                    className="px-4 py-2 bg-green-500 text-white rounded font-semibold"
-                  >
-                    Today's Consultations
-                  </Link>
-                </>
-              )}
-
-              {auth.user.role === "admin" && (
-                <Link to="/admin" className="px-4 py-2 bg-red-500 rounded">
-                  Admin
-                </Link>
-              )}
+              <Link
+                to={
+                  auth.user.role === "student"
+                    ? "/student"
+                    : auth.user.role === "instructor"
+                    ? "/instructor"
+                    : "/admin"
+                }
+                className="px-4 py-2 bg-yellow-500 text-black rounded font-semibold"
+              >
+                Dashboard
+              </Link>
 
               <NotificationsDropdown />
 
               <button
                 onClick={handleLogout}
-                className="px-4 py-2 bg-gray-700 rounded"
+                className="px-4 py-2 bg-gray-700 rounded hover:bg-gray-600"
               >
                 Logout
               </button>

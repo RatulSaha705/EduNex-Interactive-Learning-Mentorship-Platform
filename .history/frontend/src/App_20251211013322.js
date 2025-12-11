@@ -79,6 +79,7 @@ function App() {
               )
             }
           />
+          {/* Fixed: Explore Courses button */}
           <Route
             path="/student/courses"
             element={
@@ -229,28 +230,12 @@ function Navigation() {
               )}
 
               {auth.user.role === "instructor" && (
-                <>
-                  <Link
-                    to="/instructor"
-                    className="px-4 py-2 bg-yellow-500 text-black rounded font-semibold"
-                  >
-                    Dashboard
-                  </Link>
-
-                  <Link
-                    to="/instructor/consultations/schedule"
-                    className="px-4 py-2 bg-blue-500 text-white rounded font-semibold"
-                  >
-                    Manage Consultations
-                  </Link>
-
-                  <Link
-                    to="/instructor/consultations/today"
-                    className="px-4 py-2 bg-green-500 text-white rounded font-semibold"
-                  >
-                    Today's Consultations
-                  </Link>
-                </>
+                <Link
+                  to="/instructor"
+                  className="px-4 py-2 bg-yellow-500 text-black rounded font-semibold"
+                >
+                  Dashboard
+                </Link>
               )}
 
               {auth.user.role === "admin" && (

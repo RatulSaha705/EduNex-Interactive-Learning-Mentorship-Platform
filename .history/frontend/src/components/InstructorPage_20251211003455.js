@@ -147,11 +147,11 @@ export default function InstructorPage() {
 
   return (
     <div className="container mx-auto mt-4 px-2">
-      <h3 className="text-2xl font-semibold mb-6">Instructor Dashboard</h3>
+      <h3 className="text-2xl font-semibold mb-4">Instructor Dashboard</h3>
 
       {/* Create Course */}
-      <div className="bg-white shadow-md p-6 mb-6 rounded-lg">
-        <h5 className="text-lg font-medium mb-4">Create New Course</h5>
+      <div className="bg-white shadow p-4 mb-6 rounded">
+        <h5 className="text-lg font-medium mb-3">Create New Course</h5>
         <form
           onSubmit={handleSubmit}
           className="grid grid-cols-1 md:grid-cols-2 gap-4"
@@ -159,7 +159,7 @@ export default function InstructorPage() {
           <input
             type="text"
             placeholder="Course Title"
-            className="border rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-blue-300"
+            className="border rounded px-3 py-2 w-full"
             value={form.title}
             onChange={(e) => setForm({ ...form, title: e.target.value })}
             required
@@ -167,64 +167,62 @@ export default function InstructorPage() {
           <input
             type="text"
             placeholder="Category"
-            className="border rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-blue-300"
+            className="border rounded px-3 py-2 w-full"
             value={form.category}
             onChange={(e) => setForm({ ...form, category: e.target.value })}
           />
           <input
             type="text"
             placeholder="Description"
-            className="border rounded-lg px-3 py-2 col-span-1 md:col-span-2 w-full focus:ring-2 focus:ring-blue-300"
+            className="border rounded px-3 py-2 col-span-1 md:col-span-2 w-full"
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
           />
           <div>
-            <label className="block mb-1 text-sm font-medium">
-              Start Date:
-            </label>
+            <label className="block mb-1">Start Date:</label>
             <input
               type="date"
-              className="border rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-blue-300"
+              className="border rounded px-3 py-2 w-full"
               value={form.startDate}
               onChange={(e) => setForm({ ...form, startDate: e.target.value })}
               required
             />
           </div>
           <div>
-            <label className="block mb-1 text-sm font-medium">End Date:</label>
+            <label className="block mb-1">End Date:</label>
             <input
               type="date"
-              className="border rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-blue-300"
+              className="border rounded px-3 py-2 w-full"
               value={form.endDate}
               onChange={(e) => setForm({ ...form, endDate: e.target.value })}
               required
             />
           </div>
           <select
-            className="border rounded-lg px-3 py-2 w-full md:w-auto focus:ring-2 focus:ring-blue-300"
+            className="border rounded px-3 py-2 w-full md:w-auto"
             value={form.status}
             onChange={(e) => setForm({ ...form, status: e.target.value })}
           >
             <option value="draft">Draft</option>
             <option value="published">Publish</option>
           </select>
-          <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 w-full md:w-auto transition">
+          <button className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 w-full md:w-auto">
             Create Course
           </button>
         </form>
-        {message && <p className="text-green-600 mt-3">{message}</p>}
-        {error && <p className="text-red-600 mt-3">{error}</p>}
+        {message && <p className="text-green-600 mt-2">{message}</p>}
+        {error && <p className="text-red-600 mt-2">{error}</p>}
       </div>
 
       {/* My Courses */}
-      <h5 className="text-lg font-medium mb-3">My Courses</h5>
+      <h5 className="text-lg font-medium mb-2">My Courses</h5>
       {courses.length === 0 && <p>No courses created yet.</p>}
 
-      <ul className="space-y-4">
+      <ul>
         {courses.map((course) => (
           <li
             key={course._id}
-            className="border rounded-lg p-4 hover:shadow-md transition cursor-pointer"
+            className="border rounded mb-4 p-3 hover:shadow-sm cursor-pointer"
           >
             <div
               className="flex justify-between items-center"
@@ -235,8 +233,7 @@ export default function InstructorPage() {
               }
             >
               <div>
-                <strong className="text-lg">{course.title}</strong> —{" "}
-                {course.category}{" "}
+                <strong>{course.title}</strong> — {course.category}{" "}
                 <span
                   className={`text-xs font-semibold px-2 py-1 rounded ${
                     course.status === "published"
@@ -247,13 +244,11 @@ export default function InstructorPage() {
                   {course.status.toUpperCase()}
                 </span>
               </div>
-              <div className="text-gray-600">
-                {expandedCourseId === course._id ? "▲" : "▼"}
-              </div>
+              <div>{expandedCourseId === course._id ? "▲" : "▼"}</div>
             </div>
 
             {expandedCourseId === course._id && (
-              <div className="mt-4 space-y-3">
+              <div className="mt-3">
                 {course.description && <p>{course.description}</p>}
                 {course.startDate && course.endDate && (
                   <small className="text-gray-500">
@@ -282,7 +277,7 @@ export default function InstructorPage() {
                   </Link>
                   <Link
                     to={`/instructor/courses/${course._id}/discussion`}
-                    className="bg-purple-500 text-white px-3 py-1 rounded hover:bg-purple-600 text-sm"
+                    className="bg-gray-400 text-white px-3 py-1 rounded hover:bg-gray-500 text-sm"
                   >
                     Discussion Board
                   </Link>
@@ -301,38 +296,33 @@ export default function InstructorPage() {
                 </div>
 
                 {/* Announcements */}
-                <div className="mt-4 border-t pt-4">
-                  <h6 className="text-sm font-semibold text-gray-700 mb-2">
-                    Course Announcements
-                  </h6>
-                  <div className="flex gap-2 mb-3">
-                    <input
-                      type="text"
-                      placeholder="Write a new announcement..."
-                      className="flex-1 border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400"
-                      value={announcementInputs[course._id] || ""}
-                      onChange={(e) =>
-                        setAnnouncementInputs((prev) => ({
-                          ...prev,
-                          [course._id]: e.target.value,
-                        }))
-                      }
-                    />
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        handleAddAnnouncement(course._id);
-                      }}
-                      className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm"
-                    >
-                      Post
-                    </button>
-                  </div>
+                <div className="mt-3">
+                  <input
+                    type="text"
+                    placeholder="Add new announcement"
+                    className="border rounded px-3 py-2 w-full mb-2"
+                    value={announcementInputs[course._id] || ""}
+                    onChange={(e) =>
+                      setAnnouncementInputs((prev) => ({
+                        ...prev,
+                        [course._id]: e.target.value,
+                      }))
+                    }
+                  />
+                  <button
+                    className="bg-blue-500 text-white px-4 py-1 rounded hover:bg-blue-600 mb-2"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleAddAnnouncement(course._id);
+                    }}
+                  >
+                    POST
+                  </button>
 
-                  {course.announcements?.length > 0 ? (
+                  {course.announcements?.length > 0 && (
                     <>
                       <button
-                        className="text-sm text-blue-600 hover:underline mb-2"
+                        className="bg-gray-200 text-gray-700 px-3 py-1 rounded hover:bg-gray-300 mb-2 text-sm"
                         onClick={() =>
                           setShowAnnouncements((prev) => ({
                             ...prev,
@@ -341,23 +331,21 @@ export default function InstructorPage() {
                         }
                       >
                         {showAnnouncements[course._id]
-                          ? "Hide announcements"
-                          : "View announcements"}
+                          ? "Hide Announcements"
+                          : "View Announcements"}
                       </button>
 
                       {showAnnouncements[course._id] && (
-                        <ul className="space-y-2">
+                        <ul className="border rounded divide-y divide-gray-200">
                           {course.announcements.map((a) => (
                             <li
                               key={a._id}
-                              className="bg-gray-50 border rounded-lg px-3 py-2 flex justify-between items-center"
+                              className="flex justify-between items-center px-3 py-2"
                             >
-                              <span className="text-gray-800 text-sm">
-                                {a.content}
-                              </span>
+                              {a.content}
                               {isNew(a.createdAt) && (
-                                <span className="bg-yellow-100 text-yellow-800 text-xs font-semibold px-2 py-0.5 rounded-full">
-                                  NEW
+                                <span className="bg-yellow-200 text-yellow-800 text-xs px-2 py-0.5 rounded">
+                                  New
                                 </span>
                               )}
                             </li>
@@ -365,10 +353,6 @@ export default function InstructorPage() {
                         </ul>
                       )}
                     </>
-                  ) : (
-                    <p className="text-sm text-gray-400">
-                      No announcements yet.
-                    </p>
                   )}
                 </div>
               </div>

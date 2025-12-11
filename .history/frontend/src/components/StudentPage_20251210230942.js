@@ -7,7 +7,6 @@ export default function StudentPage() {
   const { auth } = useContext(AuthContext);
 
   const [courses, setCourses] = useState([]);
-  const [enrolledCourses, setEnrolledCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -21,12 +20,8 @@ export default function StudentPage() {
         const publishedCourses = res.data.courses.filter(
           (course) => course.status === "published"
         );
-        setCourses(publishedCourses);
 
-        const enrolled = publishedCourses.filter((course) =>
-          course.students?.includes(auth.user._id)
-        );
-        setEnrolledCourses(enrolled);
+        setCourses(publishedCourses);
       } catch (err) {
         setError("Failed to load courses");
       } finally {
@@ -35,7 +30,7 @@ export default function StudentPage() {
     };
 
     if (auth?.token && auth?.user?.role === "student") fetchCourses();
-  }, [auth?.token, auth?.user?.role, auth.user._id]);
+  }, [auth?.token, auth?.user?.role]);
 
   const isNew = (date) => {
     const created = new Date(date);
@@ -55,67 +50,41 @@ export default function StudentPage() {
     );
 
   return (
-    <div className="max-w-6xl mx-auto px-4 mt-8 space-y-8">
-      {/* Header */}
-      <div className="text-center space-y-2">
-        <h3 className="text-3xl font-bold text-gray-800">Student Dashboard</h3>
-        <p className="text-gray-600">
-          Welcome! Browse, enroll, and manage your courses.
-        </p>
-      </div>
-
-      {/* Quick Actions */}
+    <div className="max-w-6xl mx-auto px-4 mt-8 space-y-10">
+      {/* Quick Actions / Dashboard Buttons */}
       <div className="flex flex-wrap justify-center gap-4">
-        {/* Redirect to CourseList page */}
         <Link
-          to="/courses"
-          className="px-5 py-3 bg-blue-200 text-blue-800 rounded-lg shadow hover:bg-blue-300 transition font-medium"
+          to="/student/courses"
+          className="px-6 py-3 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition font-medium"
         >
-          Explore Courses
+          Browse Courses
         </Link>
 
         <Link
           to="/student/my-courses"
-          className="px-5 py-3 bg-green-200 text-green-800 rounded-lg shadow hover:bg-green-300 transition font-medium"
+          className="px-6 py-3 bg-green-600 text-white rounded-lg shadow hover:bg-green-700 transition font-medium"
         >
-          View My Courses
+          My Courses
         </Link>
 
         <Link
           to="/student/consultations"
-          className="px-5 py-3 bg-indigo-200 text-indigo-800 rounded-lg shadow hover:bg-indigo-300 transition font-medium"
+          className="px-6 py-3 bg-indigo-600 text-white rounded-lg shadow hover:bg-indigo-700 transition font-medium"
         >
-          Manage Consultations
+          My Consultations
         </Link>
       </div>
 
-      {/* Enrolled Courses */}
-      {enrolledCourses.length > 0 && (
-        <div className="space-y-4 mt-6">
-          <h4 className="text-xl font-semibold text-gray-800">
-            My Enrolled Courses
-          </h4>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {enrolledCourses.map((course) => (
-              <Link
-                key={course._id}
-                to={`/student/my-courses/${course._id}`}
-                className="bg-white p-4 rounded-xl shadow-md border hover:shadow-lg transition flex flex-col justify-between"
-              >
-                <h5 className="font-semibold text-gray-800 mb-2">
-                  {course.title}
-                </h5>
-                <p className="text-gray-600 text-sm">
-                  {course.description?.slice(0, 80)}...
-                </p>
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Header / Welcome */}
+      <div className="text-center space-y-2">
+        <h3 className="text-3xl font-bold text-gray-800">Student Dashboard</h3>
+        <p className="text-gray-600">
+          Welcome! Here are your recent announcements and updates.
+        </p>
+      </div>
 
       {/* Recent Announcements */}
-      <div className="space-y-4 mt-6">
+      <div className="space-y-4">
         <h4 className="text-xl font-semibold text-gray-800">
           Recent Announcements
         </h4>

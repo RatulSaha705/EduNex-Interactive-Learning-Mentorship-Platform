@@ -1,5 +1,5 @@
 import { useContext, useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import axios from "axios";
 import { AuthContext } from "../context/AuthContext";
 
@@ -11,7 +11,6 @@ function getDateStringOffset(offsetDays) {
 
 export default function StudentConsultationBooking() {
   const { auth } = useContext(AuthContext);
-  const navigate = useNavigate();
   const { id } = useParams();
 
   const [course, setCourse] = useState(null);
@@ -19,31 +18,24 @@ export default function StudentConsultationBooking() {
   const [slots, setSlots] = useState([]);
   const [dayNote, setDayNote] = useState("");
   const [isBlocked, setIsBlocked] = useState(false);
+
   const [duration, setDuration] = useState(15);
   const [selectedSlotIndex, setSelectedSlotIndex] = useState(null);
   const [studentNote, setStudentNote] = useState("");
+
   const [loadingCourse, setLoadingCourse] = useState(true);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [booking, setBooking] = useState(false);
-  const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
 
-  // --- Redirect if not logged in ---
-  useEffect(() => {
-    if (!auth?.token) {
-      navigate("/"); // redirect to login
-    }
-  }, [auth?.token, navigate]);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
 
   // --- Fetch course info ---
   useEffect(() => {
-    if (!auth?.token) return;
-
     const fetchCourse = async () => {
-      setLoadingCourse(true);
       try {
         const res = await axios.get(`http://localhost:5000/api/courses/${id}`, {
-          headers: { Authorization: `Bearer ${auth.token}` },
+          headers: { Authorization: `Bearer ${auth?.token}` },
         });
         setCourse(res.data.course);
       } catch (err) {
@@ -53,12 +45,11 @@ export default function StudentConsultationBooking() {
       }
     };
 
-    fetchCourse();
+    if (auth?.token) fetchCourse();
   }, [auth?.token, id]);
 
-  // --- Fetch available slots for selected date ---
+  // --- Fetch slots function (can call after save) ---
   const fetchSlots = async (date) => {
-    if (!auth?.token) return;
     setError("");
     setMessage("");
     setLoadingSlots(true);
@@ -69,28 +60,25 @@ export default function StudentConsultationBooking() {
         "http://localhost:5000/api/mentorship/available-slots",
         {
           params: { courseId: id, date },
-          headers: { Authorization: `Bearer ${auth.token}` },
+          headers: { Authorization: `Bearer ${auth?.token}` },
         }
       );
+
       setSlots(res.data.slots || []);
       setDayNote(res.data.dayNote || "");
       setIsBlocked(res.data.isBlocked || false);
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to load slots");
-      setSlots([]);
-      setDayNote("");
-      setIsBlocked(false);
+      setError(err.response?.data?.message || "Failed to load available slots");
     } finally {
       setLoadingSlots(false);
     }
   };
 
-  // --- Auto fetch slots when date changes ---
+  // --- Fetch slots on date change ---
   useEffect(() => {
     if (auth?.token) fetchSlots(selectedDate);
   }, [auth?.token, id, selectedDate]);
 
-  // --- Filter slots for selected duration ---
   const baseSlots = slots
     .filter((slot) => slot.maxDurationMinutes >= duration)
     .sort((a, b) => {
@@ -101,16 +89,17 @@ export default function StudentConsultationBooking() {
 
   const filteredSlots = [];
   let lastMinutes = null;
+
   for (const slot of baseSlots) {
     const [h, m] = slot.timeLabel.split(":").map(Number);
     const mins = h * 60 + m;
+
     if (lastMinutes === null || mins - lastMinutes >= duration) {
       filteredSlots.push(slot);
       lastMinutes = mins;
     }
   }
 
-  // --- Date options: today + 3 days ---
   const dateOptions = [0, 1, 2, 3].map((offset) => {
     const value = getDateStringOffset(offset);
     const label =
@@ -118,7 +107,6 @@ export default function StudentConsultationBooking() {
     return { value, label: `${label} (${value})` };
   });
 
-  // --- Handlers ---
   const handleSelectSlot = (index) => {
     setSelectedSlotIndex(index);
     setMessage("");
@@ -134,10 +122,15 @@ export default function StudentConsultationBooking() {
     const slot = filteredSlots[selectedSlotIndex];
     if (!slot) return;
 
+    if (![15, 30].includes(duration)) {
+      setError("Duration must be 15 or 30 minutes.");
+      return;
+    }
+
     try {
-      setBooking(true);
       setError("");
       setMessage("");
+      setBooking(true);
 
       await axios.post(
         "http://localhost:5000/api/mentorship/sessions",
@@ -148,14 +141,15 @@ export default function StudentConsultationBooking() {
           durationMinutes: duration,
           studentNote,
         },
-        { headers: { Authorization: `Bearer ${auth.token}` } }
+        { headers: { Authorization: `Bearer ${auth?.token}` } }
       );
 
       setMessage("Consultation booked successfully!");
       setStudentNote("");
       setSelectedSlotIndex(null);
 
-      await fetchSlots(selectedDate); // refresh slots
+      // --- Refresh slots after booking ---
+      await fetchSlots(selectedDate);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to book session");
     } finally {
@@ -220,24 +214,36 @@ export default function StudentConsultationBooking() {
       {/* Step 2: Duration */}
       <h5 className="mt-3 mb-2 font-medium">Session Length</h5>
       <div className="flex gap-3 mb-4">
-        {[15, 30].map((d) => (
-          <button
-            key={d}
-            className={`px-4 py-2 rounded ${
-              duration === d
-                ? "bg-blue-500 text-white"
-                : "bg-white border border-blue-500 text-blue-500"
-            }`}
-            onClick={() => {
-              setDuration(d);
-              setSelectedSlotIndex(null);
-              setMessage("");
-              setError("");
-            }}
-          >
-            {d} minutes
-          </button>
-        ))}
+        <button
+          className={`px-4 py-2 rounded ${
+            duration === 15
+              ? "bg-blue-500 text-white"
+              : "bg-white border border-blue-500 text-blue-500"
+          }`}
+          onClick={() => {
+            setDuration(15);
+            setSelectedSlotIndex(null);
+            setMessage("");
+            setError("");
+          }}
+        >
+          15 minutes
+        </button>
+        <button
+          className={`px-4 py-2 rounded ${
+            duration === 30
+              ? "bg-blue-500 text-white"
+              : "bg-white border border-blue-500 text-blue-500"
+          }`}
+          onClick={() => {
+            setDuration(30);
+            setSelectedSlotIndex(null);
+            setMessage("");
+            setError("");
+          }}
+        >
+          30 minutes
+        </button>
       </div>
 
       {/* Step 3: Available slots */}

@@ -10,6 +10,7 @@ export default function StudentPage() {
   const [enrolledCourses, setEnrolledCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [showExplore, setShowExplore] = useState(false);
 
   useEffect(() => {
     const fetchCourses = async () => {
@@ -54,6 +55,11 @@ export default function StudentPage() {
       <p className="text-center mt-10 text-red-600 font-medium">{error}</p>
     );
 
+  // Courses that student hasn't enrolled in
+  const availableCourses = courses.filter(
+    (course) => !course.students?.includes(auth.user._id)
+  );
+
   return (
     <div className="max-w-6xl mx-auto px-4 mt-8 space-y-8">
       {/* Header */}
@@ -66,13 +72,12 @@ export default function StudentPage() {
 
       {/* Quick Actions */}
       <div className="flex flex-wrap justify-center gap-4">
-        {/* Redirect to CourseList page */}
-        <Link
-          to="/courses"
+        <button
+          onClick={() => setShowExplore(!showExplore)}
           className="px-5 py-3 bg-blue-200 text-blue-800 rounded-lg shadow hover:bg-blue-300 transition font-medium"
         >
           Explore Courses
-        </Link>
+        </button>
 
         <Link
           to="/student/my-courses"
@@ -88,6 +93,40 @@ export default function StudentPage() {
           Manage Consultations
         </Link>
       </div>
+
+      {/* Explore Courses */}
+      {showExplore && (
+        <div className="space-y-4 mt-6">
+          <h4 className="text-xl font-semibold text-gray-800">
+            Available Courses
+          </h4>
+          {availableCourses.length === 0 ? (
+            <p className="text-gray-500">No courses available to explore</p>
+          ) : (
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {availableCourses.map((course) => (
+                <Link
+                  key={course._id}
+                  to={`/student/courses/${course._id}`}
+                  className="bg-white p-4 rounded-xl shadow-md border hover:shadow-lg transition flex flex-col justify-between"
+                >
+                  <h5 className="font-semibold text-gray-800 mb-2">
+                    {course.title}
+                  </h5>
+                  <p className="text-gray-600 text-sm">
+                    {course.description?.slice(0, 80)}...
+                  </p>
+                  {isNew(course.createdAt) && (
+                    <span className="mt-2 px-2 py-1 text-xs font-semibold bg-yellow-400 text-black rounded-full">
+                      New
+                    </span>
+                  )}
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Enrolled Courses */}
       {enrolledCourses.length > 0 && (
