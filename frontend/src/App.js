@@ -27,6 +27,9 @@ import CourseDiscussion from "./pages/CourseDiscussion";
 import AddLesson from "./pages/AddLesson";
 import CourseList from "./pages/CourseList";
 import InstructorCourseDetails from "./pages/InstructorCourseDetails";
+// ✨ Added imports
+import LearningStats from "./pages/LearningStats";
+import AdminReports from "./pages/AdminReports";  // ← new import
 import StudentMyConsultations from "./pages/StudentMyConsultations";
 import StudentConsultationBooking from "./pages/StudentConsultationBooking";
 import InstructorConsultationSchedule from "./pages/InstructorConsultationSchedule";
@@ -45,6 +48,120 @@ function App() {
 
   return (
     <BrowserRouter>
+      <Navigation auth={auth} logout={logout} />
+      <Routes>
+        {/* Public Routes */}
+        <Route
+          path="/"
+          element={!auth.user ? <Login /> : <Navigate to="/profile" />}
+        />
+        <Route
+          path="/register"
+          element={!auth.user ? <Register /> : <Navigate to="/profile" />}
+        />
+
+        {/* Protected Routes */}
+        <Route
+          path="/profile"
+          element={auth.user ? <Profile /> : <Navigate to="/" />}
+        />
+        <Route
+          path="/profile/view"
+          element={auth.user ? <ViewProfile /> : <Navigate to="/" />}
+        />
+        <Route
+          path="/student"
+          element={
+            auth.user?.role === "student" ? (
+              <StudentPage />
+            ) : (
+              <Navigate to="/" />
+            )
+          }
+        />
+
+        {/* Updated route: student courses now shows CourseList */}
+        <Route
+          path="/student/courses"
+          element={
+            auth.user?.role === "student" ? (
+              <CourseList />
+            ) : (
+              <Navigate to="/" />
+            )
+          }
+        />
+
+        <Route path="/student/courses/:id" element={<CourseDetails />} />
+        <Route path="/student/my-courses" element={<MyCourses />} />
+
+        <Route
+          path="/instructor"
+          element={
+            auth.user?.role === "instructor" ? (
+              <InstructorPage />
+            ) : (
+              <Navigate to="/" />
+            )
+          }
+        />
+        <Route
+          path="/instructor/create-course"
+          element={
+            auth.user?.role === "instructor" ? (
+              <CreateCourse />
+            ) : (
+              <Navigate to="/" />
+            )
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            auth.user?.role === "admin" ? <AdminPage /> : <Navigate to="/" />
+          }
+        />
+
+        {/* New route for Admin: Report Management */}
+        <Route
+          path="/admin/reports"
+          element={
+            auth.user?.role === "admin" ? <AdminReports /> : <Navigate to="/" />
+          }
+        />
+
+        <Route
+          path="/instructor/course/:id/edit"
+          element={
+            auth.user?.role === "instructor" ? <EditCourse /> : <Navigate to="/" />
+          }
+        />
+        <Route path="/courses" element={<CourseList />} />
+        <Route path="/courses/:courseId/add-lesson" element={<AddLesson />} />
+
+        <Route path="*" element={<Navigate to="/" />} />
+
+        <Route
+          path="/instructor/courses/:id"
+          element={<InstructorCourseDetails />}
+        />
+        <Route
+          path="/instructor/courses/:id/add-lesson"
+          element={<AddLesson />}
+        />
+
+        {/* 🌟 New route for LearningStats */}
+        <Route
+          path="/student/learning-stats"
+          element={
+            auth.user?.role === "student" ? (
+              <LearningStats />
+            ) : (
+              <Navigate to="/" />
+            )
+          }
+        />
+      </Routes>
       <Navigation />
       <div className="max-w-7xl mx-auto px-4 pt-20">
         <Routes>

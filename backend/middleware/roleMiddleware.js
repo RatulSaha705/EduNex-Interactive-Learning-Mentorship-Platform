@@ -1,21 +1,44 @@
 // backend/middleware/roleMiddleware.js
 
+/**
+ * Role-based authorization middleware.
+ *
+ * Usage:
+ *   router.get(
+ *     "/admin-only",
+ *     protect,
+ *     authorizeRoles("admin"),
+ *     handler
+ *   );
+ *
+ *   router.post(
+ *     "/instructor-or-admin",
+ *     protect,
+ *     authorizeRoles("instructor", "admin"),
+ *     handler
+ *   );
+ */
 export const authorizeRoles = (...allowedRoles) => {
   return (req, res, next) => {
-    // user should already be set by `protect` middleware
+    // `protect` middleware should already have set `req.user`
     if (!req.user) {
       return res.status(401).json({ message: "Not authenticated" });
     }
 
-    // If you haven't added `role` to User yet, this will be undefined.
-    // For now we just check normally; once you add roles to the User model,
-    // this will start enforcing properly.
     const userRole = req.user.role;
 
-    if (!userRole || !allowedRoles.includes(userRole)) {
+    // If somehow no role is set on the user, treat as forbidden
+    if (!userRole) {
       return res
         .status(403)
-        .json({ message: "Forbidden: you do not have permission" });
+        .json({ message: "Forbidden: role not set for this user" });
+    }
+
+    // Check if the user's role is in the allowed roles
+    if (!allowedRoles.includes(userRole)) {
+      return res.status(403).json({
+        message: "Forbidden: you do not have permission to access this resource",
+      });
     }
 
     next();

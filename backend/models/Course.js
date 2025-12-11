@@ -20,7 +20,7 @@ const announcementSchema = new mongoose.Schema(
     createdAt: { type: Date, default: Date.now },
     isNew: { type: Boolean, default: true }, // highlights new announcements
   },
-  { _id: false } // optional, prevents creating separate _id for each announcement
+  { _id: false } // prevents creating separate _id for each announcement
 );
 
 const courseSchema = new mongoose.Schema(
@@ -29,7 +29,16 @@ const courseSchema = new mongoose.Schema(
     description: { type: String, default: "" },
     category: { type: String, default: "" },
 
-    // ✅ NEW: publish workflow
+    // tags used for recommendations (match with user.interests)
+    tags: [
+      {
+        type: String,
+        trim: true,
+        lowercase: true,
+      },
+    ],
+
+    // publish workflow
     status: {
       type: String,
       enum: ["draft", "published", "archived"],
@@ -41,13 +50,16 @@ const courseSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+
     lessons: [lessonSchema],
+
     enrolledStudents: [
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
       },
     ],
+
     completedLessons: [
       {
         student: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
@@ -55,14 +67,17 @@ const courseSchema = new mongoose.Schema(
       },
     ],
 
-    // ✅ NEW: Course date range
+    // Course date range
     startDate: { type: Date },
     endDate: { type: Date },
 
-    // ✅ NEW: Course Announcements
+    // Course Announcements
     announcements: [announcementSchema],
   },
   { timestamps: true }
 );
+
+// optional index to speed up tag/category queries in recommendations/filters
+courseSchema.index({ tags: 1, category: 1, status: 1 });
 
 export default mongoose.model("Course", courseSchema);
