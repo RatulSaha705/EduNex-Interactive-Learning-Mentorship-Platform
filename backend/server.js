@@ -12,6 +12,8 @@ import mentorshipRoutes from "./routes/mentorshipRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 import certificateRoutes from "./routes/certificateRoutes.js";
 import statsRoutes from "./routes/statsRoutes.js";
+import reportRoutes from "./routes/reportRoutes.js";
+
 
 dotenv.config();
 connectDB();
@@ -29,6 +31,8 @@ app.use("/api/mentorship", mentorshipRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/certificates", certificateRoutes);
 app.use("/api/stats", statsRoutes);
+app.use("/api/reports", reportRoutes);
+
 // Test route
 app.get("/", (req, res) => {
   res.send("EduNex API is running...");

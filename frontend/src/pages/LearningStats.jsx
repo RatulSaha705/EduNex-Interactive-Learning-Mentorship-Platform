@@ -11,9 +11,42 @@ export default function LearningStats() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  // 🔹 NEW: Download Progress Report (PDF)
+  const handleDownloadReport = async () => {
+    try {
+      const res = await axios.get(
+        "http://localhost:5000/api/reports/progress",
+        {
+          headers: { Authorization: `Bearer ${auth.token}` },
+          responseType: "blob",
+        }
+      );
+
+      const blob = new Blob([res.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "edunex-progress-report.pdf";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error(err);
+      alert(
+        err.response?.data?.message ||
+          "Failed to download progress report. Please try again."
+      );
+    }
+  };
+
   useEffect(() => {
     const fetchStats = async () => {
-      if (!auth?.token) return;
+      if (!auth?.token) {
+        setLoading(false);
+        return;
+      }
 
       try {
         const res = await axios.get("http://localhost:5000/api/stats/my", {
@@ -100,6 +133,13 @@ export default function LearningStats() {
           >
             🎓 My Certificates
           </Link>
+          {/* 🔹 NEW: Export PDF button */}
+          <button
+            onClick={handleDownloadReport}
+            className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700"
+          >
+            ⬇ Export Progress Report (PDF)
+          </button>
         </div>
       </div>
 
@@ -163,7 +203,9 @@ export default function LearningStats() {
               );
               return (
                 <div key={day.date} className="flex items-center gap-2">
-                  <div className="w-32 text-xs text-gray-600">{dateLabel}</div>
+                  <div className="w-32 text-xs text-gray-600">
+                    {dateLabel}
+                  </div>
                   <div className="flex-1 bg-gray-100 rounded-full h-3 overflow-hidden">
                     <div
                       className="h-3 rounded-full bg-indigo-500 transition-all"
@@ -293,7 +335,11 @@ export default function LearningStats() {
 
 function SummaryCard({ label, value, sub, color }) {
   return (
-    <div className={`rounded-xl shadow-sm p-4 ${color || "bg-gray-50"}`}>
+    <div
+      className={`rounded-xl shadow-sm p-4 ${
+        color || "bg-gray-50 text-gray-800"
+      }`}
+    >
       <div className="text-xs uppercase tracking-wide text-gray-500">
         {label}
       </div>
