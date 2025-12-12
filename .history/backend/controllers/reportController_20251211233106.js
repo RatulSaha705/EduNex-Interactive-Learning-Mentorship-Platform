@@ -48,7 +48,7 @@ function drawPageFrame(doc, user) {
   doc
     .font(FONT.base)
     .fontSize(9)
-    .fillColor(COLORS.accent) // light but readable on dark, still ok on white
+    .fillColor("#F9FAFB") // light but readable on dark, still ok on white
     .text("Interactive Learning & Mentorship Platform", left, 40);
 
   // title right
@@ -332,11 +332,11 @@ function drawActivityGrid(doc, activityLast7Days) {
   doc.y = rowY + 22;
 }
 
-/** ===================== PROGRESS REPORT (PDF) ===================== **/
+/** ===================== MAIN CONTROLLER ===================== **/
 
 export const generateProgressReport = async (req, res) => {
   try {
-    const studentId = req.user.id || req.user._id;
+    const studentId = req.user.id;
 
     const user = await User.findById(studentId).select("name email");
     if (!user) {
@@ -352,12 +352,10 @@ export const generateProgressReport = async (req, res) => {
     const contentWidth = pageWidth - left - right;
 
     res.setHeader("Content-Type", "application/pdf");
-    // inline = browser preview; change to attachment for forced download
     res.setHeader(
       "Content-Disposition",
-      'inline; filename="edunex-progress-report.pdf"'
+      'attachment; filename="edunex-progress-report.pdf"'
     );
-
     doc.pipe(res);
 
     // PAGE FRAME + HEADER

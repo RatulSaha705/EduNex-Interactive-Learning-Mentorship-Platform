@@ -10,7 +10,6 @@ export default function StudentPage() {
   const [courses, setCourses] = useState([]);
   const [enrolledCourses, setEnrolledCourses] = useState([]);
   const [recommendedCourses, setRecommendedCourses] = useState([]);
-  const [basedOnCategories, setBasedOnCategories] = useState([]); // ⭐ NEW
   const [loading, setLoading] = useState(true);
   const [recLoading, setRecLoading] = useState(false);
   const [error, setError] = useState("");
@@ -54,7 +53,6 @@ export default function StudentPage() {
           }
         );
         setRecommendedCourses(res.data.recommendations || []);
-        setBasedOnCategories(res.data.basedOnCategories || []); // ⭐ NEW
       } catch (err) {
         console.error("Failed to load recommendations:", err);
         // don't crash the page if recs fail
@@ -187,7 +185,7 @@ export default function StudentPage() {
       </div>
 
       {/* ⭐ Recommended Courses – more aesthetic */}
-      <div className="space-y-2 mt-6">
+      <div className="space-y-4 mt-6">
         <div className="flex justify-between items-center">
           <h4 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
             <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-700 text-lg">
@@ -200,19 +198,8 @@ export default function StudentPage() {
           )}
         </div>
 
-        {/* ⭐ NEW: explain why these are recommended */}
-        {basedOnCategories.length > 0 && (
-          <p className="text-xs text-gray-500 ml-1">
-            Because you’ve been learning{" "}
-            <span className="font-semibold">
-              {basedOnCategories.join(", ")}
-            </span>{" "}
-            courses.
-          </p>
-        )}
-
         {recommendedCourses.length === 0 && !recLoading && (
-          <div className="bg-white p-4 rounded-2xl shadow-md border border-dashed border-gray-300 mt-1">
+          <div className="bg-white p-4 rounded-2xl shadow-md border border-dashed border-gray-300">
             <p className="text-sm text-gray-600">
               Start enrolling in courses to get personalized recommendations
               based on your favorite categories.
@@ -221,7 +208,7 @@ export default function StudentPage() {
         )}
 
         {recommendedCourses.length > 0 && (
-          <div className="mt-2 grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
             {recommendedCourses.map((course) => {
               const isNewCourse = isCourseNew(course.startDate);
               const learners = course.totalEnrolled || 0;

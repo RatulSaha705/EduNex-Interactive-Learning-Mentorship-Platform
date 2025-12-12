@@ -29,7 +29,11 @@ function drawPageFrame(doc, user) {
   const contentWidth = pageWidth - left - right;
 
   // top dark bar
-  doc.save().rect(0, 0, pageWidth, 70).fill(COLORS.headerDark).restore();
+  doc
+    .save()
+    .rect(0, 0, pageWidth, 70)
+    .fill(COLORS.headerDark)
+    .restore();
 
   // soft background
   doc
@@ -42,26 +46,25 @@ function drawPageFrame(doc, user) {
   doc
     .font(FONT.bold)
     .fontSize(20)
-    .fillColor(COLORS.accent) // orange
+    .fillColor("#FFFFFF")
     .text("EduNex", left, 20);
 
   doc
     .font(FONT.base)
     .fontSize(9)
-    .fillColor(COLORS.accent) // light but readable on dark, still ok on white
+    .fillColor("#E5E7EB")
     .text("Interactive Learning & Mentorship Platform", left, 40);
 
   // title right
   doc
     .font(FONT.bold)
     .fontSize(18)
-    .fillColor("#60A5FA") // brighter blue
+    .fillColor(COLORS.primaryLight)
     .text("PROGRESS", left, 20, { width: contentWidth, align: "right" });
-
   doc
     .font(FONT.bold)
     .fontSize(18)
-    .fillColor("#60A5FA")
+    .fillColor(COLORS.primaryLight)
     .text("REPORT", left, 40, { width: contentWidth, align: "right" });
 
   // white card for main body
@@ -233,7 +236,12 @@ function drawCourseRow(doc, colWidths, course, altRow) {
 
   const bg = altRow ? "#F9FAFB" : "#FFFFFF";
 
-  doc.save().fillColor(bg).rect(xStart, y, totalW, h).fill().restore();
+  doc
+    .save()
+    .fillColor(bg)
+    .rect(xStart, y, totalW, h)
+    .fill()
+    .restore();
 
   // grid borders
   doc
@@ -266,10 +274,12 @@ function drawCourseRow(doc, colWidths, course, altRow) {
   x += w3;
 
   // Lessons
-  doc.text(`${course.lessonsCompleted}/${course.lessonsTotal}`, x + 4, y + 6, {
-    width: w4 - 8,
-    ...center,
-  });
+  doc.text(
+    `${course.lessonsCompleted}/${course.lessonsTotal}`,
+    x + 4,
+    y + 6,
+    { width: w4 - 8, ...center }
+  );
   x += w4;
 
   // Time
@@ -313,7 +323,10 @@ function drawActivityGrid(doc, activityLast7Days) {
 
   // values row
   x = left + 12;
-  doc.save().strokeColor(COLORS.border).lineWidth(0.5);
+  doc
+    .save()
+    .strokeColor(COLORS.border)
+    .lineWidth(0.5);
 
   activityLast7Days.forEach((d) => {
     doc.rect(x, rowY, colWidth, 18).stroke();
@@ -332,11 +345,11 @@ function drawActivityGrid(doc, activityLast7Days) {
   doc.y = rowY + 22;
 }
 
-/** ===================== PROGRESS REPORT (PDF) ===================== **/
+/** ===================== MAIN CONTROLLER ===================== **/
 
 export const generateProgressReport = async (req, res) => {
   try {
-    const studentId = req.user.id || req.user._id;
+    const studentId = req.user.id;
 
     const user = await User.findById(studentId).select("name email");
     if (!user) {
@@ -352,12 +365,10 @@ export const generateProgressReport = async (req, res) => {
     const contentWidth = pageWidth - left - right;
 
     res.setHeader("Content-Type", "application/pdf");
-    // inline = browser preview; change to attachment for forced download
     res.setHeader(
       "Content-Disposition",
-      'inline; filename="edunex-progress-report.pdf"'
+      'attachment; filename="edunex-progress-report.pdf"'
     );
-
     doc.pipe(res);
 
     // PAGE FRAME + HEADER

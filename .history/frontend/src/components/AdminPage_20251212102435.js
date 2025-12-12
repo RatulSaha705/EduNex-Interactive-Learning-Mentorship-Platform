@@ -6,11 +6,10 @@ import { AuthContext } from "../context/AuthContext";
 export default function AdminPage() {
   const { auth } = useContext(AuthContext);
 
-  const [tab, setTab] = useState("users"); // "users" | "courses" | "reports" | "analytics"
+  const [tab, setTab] = useState("users"); // "users" | "courses" | "reports"
   const [users, setUsers] = useState([]);
   const [courses, setCourses] = useState([]);
   const [reports, setReports] = useState([]);
-  const [analytics, setAnalytics] = useState(null);
 
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
@@ -29,18 +28,15 @@ export default function AdminPage() {
 
         const headers = { Authorization: `Bearer ${auth.token}` };
 
-        const [usersRes, coursesRes, reportsRes, analyticsRes] =
-          await Promise.all([
-            axios.get("http://localhost:5000/api/admin/users", { headers }),
-            axios.get("http://localhost:5000/api/admin/courses", { headers }),
-            axios.get("http://localhost:5000/api/admin/reports", { headers }),
-            axios.get("http://localhost:5000/api/admin/analytics", { headers }),
-          ]);
+        const [usersRes, coursesRes, reportsRes] = await Promise.all([
+          axios.get("http://localhost:5000/api/admin/users", { headers }),
+          axios.get("http://localhost:5000/api/admin/courses", { headers }),
+          axios.get("http://localhost:5000/api/admin/reports", { headers }),
+        ]);
 
         setUsers(usersRes.data.users || []);
         setCourses(coursesRes.data.courses || []);
         setReports(reportsRes.data.reports || []);
-        setAnalytics(analyticsRes.data.analytics || null);
       } catch (err) {
         console.error("Admin dashboard load error:", err);
         setError(
@@ -212,17 +208,6 @@ export default function AdminPage() {
     );
   }
 
-  // Analytics shortcuts (safe with optional chaining)
-  const userCounts = analytics?.userCounts || {};
-  const courseCounts = analytics?.courseCounts || {};
-  const topCourses = analytics?.topCourses || [];
-  const topCategories = analytics?.topCategories || [];
-  const trends = analytics?.trends || {};
-  const signups7 =
-    trends.userSignupsLast7Days?.reduce((sum, d) => sum + d.count, 0) || 0;
-  const newCourses7 =
-    trends.coursesCreatedLast7Days?.reduce((sum, d) => sum + d.count, 0) || 0;
-
   return (
     <div className="max-w-6xl mx-auto px-4 mt-8 space-y-6">
       {/* Header */}
@@ -230,7 +215,7 @@ export default function AdminPage() {
         <div>
           <h2 className="text-3xl font-bold text-gray-800">Admin Dashboard</h2>
           <p className="text-gray-600">
-            Monitor users, courses, reported content and system-wide analytics.
+            Monitor users, courses, and reported content across EduNex.
           </p>
         </div>
         {updating && (
@@ -268,7 +253,7 @@ export default function AdminPage() {
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200 flex flex-wrap gap-4 text-sm">
+      <div className="border-b border-gray-200 flex gap-4 text-sm">
         <TabButton
           label="Users"
           active={tab === "users"}
@@ -284,14 +269,9 @@ export default function AdminPage() {
           active={tab === "reports"}
           onClick={() => setTab("reports")}
         />
-        <TabButton
-          label="Analytics"
-          active={tab === "analytics"}
-          onClick={() => setTab("analytics")}
-        />
       </div>
 
-      {/* Tab content: USERS */}
+      {/* Tab content */}
       {tab === "users" && (
         <div className="bg-white rounded-xl shadow-md p-5 overflow-x-auto">
           <div className="flex justify-between items-center mb-3">
@@ -375,7 +355,6 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* Tab content: COURSES */}
       {tab === "courses" && (
         <div className="bg-white rounded-xl shadow-md p-5 overflow-x-auto">
           <div className="flex justify-between items-center mb-3">
@@ -472,7 +451,6 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* Tab content: REPORTS */}
       {tab === "reports" && (
         <div className="bg-white rounded-xl shadow-md p-5 overflow-x-auto">
           <div className="flex justify-between items-center mb-3">
@@ -584,160 +562,6 @@ export default function AdminPage() {
           )}
         </div>
       )}
-
-      {/* Tab content: ANALYTICS */}
-      {tab === "analytics" && (
-        <div className="bg-white rounded-xl shadow-md p-5 space-y-5 overflow-x-auto">
-          <div className="flex justify-between items-center mb-1">
-            <h3 className="text-lg font-semibold text-gray-800">
-              System Analytics
-            </h3>
-            <span className="text-xs text-gray-500">
-              High-level insights on user activity, courses and trends.
-            </span>
-          </div>
-
-          {!analytics ? (
-            <p className="text-sm text-gray-600">
-              Analytics data is not available yet.
-            </p>
-          ) : (
-            <>
-              {/* Analytics summary cards */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <SummaryCard
-                  label="Users (total / roles)"
-                  value={userCounts.total ?? "—"}
-                  sub={`Students ${userCounts.students ?? 0} • Instructors ${
-                    userCounts.instructors ?? 0
-                  } • Admins ${userCounts.admins ?? 0}`}
-                  color="bg-sky-50 text-sky-900"
-                />
-                <SummaryCard
-                  label="Courses (total / states)"
-                  value={courseCounts.total ?? "—"}
-                  sub={`Published ${courseCounts.published ?? 0} • Draft ${
-                    courseCounts.draft ?? 0
-                  } • Archived ${courseCounts.archived ?? 0}`}
-                  color="bg-indigo-50 text-indigo-900"
-                />
-                <SummaryCard
-                  label="Signups (7 days)"
-                  value={signups7}
-                  sub="New users in last 7 days"
-                  color="bg-emerald-50 text-emerald-900"
-                />
-                <SummaryCard
-                  label="New Courses (7 days)"
-                  value={newCourses7}
-                  sub="Courses created in last 7 days"
-                  color="bg-orange-50 text-orange-900"
-                />
-              </div>
-
-              {/* Top courses & categories */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                {/* Top courses */}
-                <div>
-                  <h4 className="text-md font-semibold text-gray-800 mb-2">
-                    Top Courses by Enrollment
-                  </h4>
-                  {topCourses.length === 0 ? (
-                    <p className="text-sm text-gray-600">
-                      No published courses with enrollments yet.
-                    </p>
-                  ) : (
-                    <table className="min-w-full text-sm">
-                      <thead>
-                        <tr className="border-b bg-gray-50">
-                          <th className="py-2 px-3 text-left font-medium text-gray-700">
-                            Course
-                          </th>
-                          <th className="py-2 px-3 text-center font-medium text-gray-700">
-                            Category
-                          </th>
-                          <th className="py-2 px-3 text-center font-medium text-gray-700">
-                            Enrolled
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {topCourses.map((c) => (
-                          <tr key={c._id} className="border-b last:border-0">
-                            <td className="py-2 px-3 text-gray-800">
-                              <div className="font-medium">{c.title}</div>
-                              {c.instructor?.name && (
-                                <div className="text-xs text-gray-500">
-                                  {c.instructor.name}
-                                </div>
-                              )}
-                            </td>
-                            <td className="py-2 px-3 text-center text-gray-600">
-                              {c.category}
-                            </td>
-                            <td className="py-2 px-3 text-center text-gray-800">
-                              {c.enrolledCount}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  )}
-                </div>
-
-                {/* Top categories */}
-                <div>
-                  <h4 className="text-md font-semibold text-gray-800 mb-2">
-                    Top Categories
-                  </h4>
-                  {topCategories.length === 0 ? (
-                    <p className="text-sm text-gray-600">
-                      No category analytics available yet.
-                    </p>
-                  ) : (
-                    <div className="space-y-2">
-                      {topCategories.map((cat) => (
-                        <div
-                          key={cat.category}
-                          className="flex justify-between items-center border rounded-lg px-3 py-2"
-                        >
-                          <div>
-                            <div className="font-medium text-gray-800">
-                              {cat.category}
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              {cat.courseCount} course
-                              {cat.courseCount !== 1 ? "s" : ""} •{" "}
-                              {cat.totalEnrollments} total enrollments
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Trends last 7 days */}
-              <div>
-                <h4 className="text-md font-semibold text-gray-800 mb-2">
-                  Last 7 Days Activity
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                  <TrendTable
-                    title="User Signups"
-                    data={trends.userSignupsLast7Days || []}
-                  />
-                  <TrendTable
-                    title="New Courses Created"
-                    data={trends.coursesCreatedLast7Days || []}
-                  />
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-      )}
     </div>
   );
 }
@@ -770,40 +594,5 @@ function TabButton({ label, active, onClick }) {
     >
       {label}
     </button>
-  );
-}
-
-function TrendTable({ title, data }) {
-  return (
-    <div className="border rounded-xl p-3">
-      <div className="text-xs font-semibold text-gray-700 mb-2">{title}</div>
-      {data.length === 0 ? (
-        <p className="text-xs text-gray-500">No data for this period.</p>
-      ) : (
-        <table className="w-full text-xs">
-          <thead>
-            <tr className="border-b bg-gray-50">
-              <th className="py-1 px-2 text-left text-gray-600">Date</th>
-              <th className="py-1 px-2 text-center text-gray-600">Count</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.map((row) => (
-              <tr key={row.date} className="border-b last:border-0">
-                <td className="py-1 px-2 text-gray-700">
-                  {new Date(row.date).toLocaleDateString(undefined, {
-                    month: "short",
-                    day: "numeric",
-                  })}
-                </td>
-                <td className="py-1 px-2 text-center text-gray-800">
-                  {row.count}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </div>
   );
 }

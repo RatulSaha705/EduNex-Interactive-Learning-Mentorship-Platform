@@ -3,6 +3,11 @@ import PDFDocument from "pdfkit";
 import User from "../models/User.js";
 import { calculateLearningStats } from "./statsController.js";
 
+import Report from "../models/Report.js";
+import Course from "../models/Course.js";
+import Question from "../models/Question.js";
+import Answer from "../models/Answer.js";
+
 /** --------- Constants (colors / fonts) --------- **/
 const COLORS = {
   primary: "#1D4ED8", // blue-700
@@ -336,7 +341,7 @@ function drawActivityGrid(doc, activityLast7Days) {
 
 export const generateProgressReport = async (req, res) => {
   try {
-    const studentId = req.user.id || req.user._id;
+    const studentId = req.user.id;
 
     const user = await User.findById(studentId).select("name email");
     if (!user) {
@@ -524,5 +529,166 @@ export const generateProgressReport = async (req, res) => {
         .status(500)
         .json({ message: "Failed to generate progress report PDF" });
     }
+  }
+};
+
+/** ======================================================================
+ *  INAPPROPRIATE CONTENT REPORTS (users reporting courses / Q&A / users)
+ *  ====================================================================== */
+
+/**
+ * POST /api/reports
+ * Body: { targetType, targetId, reason, details? }
+ * Auth: any logged-in user
+ */
+export const createContentReport = async (req, res) => {
+  try {
+    const reporterId = req.user.id || req.user._id;
+    const { targetType, targetId, reason, details } = req.body;
+
+    if (!targetType || !targetId || !reason) {
+      return res.status(400).json({
+        message: "targetType, targetId and reason are required",
+      });
+    }
+
+    if (!["course", "question", "answer", "user"].includes(targetType)) {
+      return res.status(400).json({ message: "Invalid targetType" });
+    }
+
+    let courseId = null;
+    let targetSummary = "";
+
+    if (targetType === "course") {
+      const course = await Course.findById(targetId).select(
+        "title description"
+      );
+      if (!course) return res.status(404).json({ message: "Course not found" });
+
+      courseId = course._id;
+      targetSummary = `${course.title} – ${
+        course.description?.slice(0, 120) || ""
+      }`.trim();
+    } else if (targetType === "question") {
+      const question = await Question.findById(targetId).select(
+        "title content course"
+      );
+      if (!question)
+        return res.status(404).json({ message: "Question not found" });
+
+      courseId = question.course;
+      targetSummary = `${question.title || "Question"} – ${
+        question.content?.slice(0, 120) || ""
+      }`.trim();
+    } else if (targetType === "answer") {
+      const answer = await Answer.findById(targetId)
+        .select("content question")
+        .populate("question", "course");
+      if (!answer) return res.status(404).json({ message: "Answer not found" });
+
+      courseId = answer.question?.course || null;
+      targetSummary = answer.content?.slice(0, 140) || "Answer";
+    } else if (targetType === "user") {
+      const reportedUser = await User.findById(targetId).select(
+        "name email role"
+      );
+      if (!reportedUser)
+        return res.status(404).json({ message: "User not found" });
+
+      targetSummary = `User: ${reportedUser.name} (${reportedUser.email}) – role: ${reportedUser.role}`;
+    }
+
+    const report = await Report.create({
+      reporter: reporterId,
+      targetType,
+      targetId,
+      course: courseId,
+      targetSummary,
+      reason,
+      details,
+    });
+
+    return res.status(201).json({
+      message: "Thank you. Your report has been submitted for review.",
+      report,
+    });
+  } catch (err) {
+    console.error("Error in createContentReport:", err);
+    return res.status(500).json({
+      message: "Failed to submit report",
+      error: err.message,
+    });
+  }
+};
+
+/**
+ * GET /api/reports
+ * Query: ?status=open|in_review|resolved|dismissed  (optional)
+ * Auth: admin only
+ */
+export const adminGetReports = async (req, res) => {
+  try {
+    const { status } = req.query;
+    const filter = {};
+    if (status) filter.status = status;
+
+    const reports = await Report.find(filter)
+      .populate("reporter", "name email role")
+      .populate("resolvedBy", "name email")
+      .sort({ createdAt: -1 });
+
+    return res.json({ reports });
+  } catch (err) {
+    console.error("Error in adminGetReports:", err);
+    return res.status(500).json({
+      message: "Failed to load reports",
+      error: err.message,
+    });
+  }
+};
+
+/**
+ * PATCH /api/reports/:id/status
+ * Body: { status, resolutionNotes? }
+ * Auth: admin only
+ */
+export const adminUpdateReportStatus = async (req, res) => {
+  try {
+    const adminId = req.user.id || req.user._id;
+    const { id } = req.params;
+    const { status, resolutionNotes } = req.body;
+
+    const allowed = ["open", "in_review", "resolved", "dismissed"];
+    if (!allowed.includes(status)) {
+      return res.status(400).json({ message: "Invalid status" });
+    }
+
+    const report = await Report.findById(id);
+    if (!report) {
+      return res.status(404).json({ message: "Report not found" });
+    }
+
+    report.status = status;
+    if (typeof resolutionNotes === "string") {
+      report.resolutionNotes = resolutionNotes;
+    }
+    report.resolvedBy = adminId;
+
+    await report.save();
+
+    const populated = await Report.findById(id)
+      .populate("reporter", "name email role")
+      .populate("resolvedBy", "name email");
+
+    return res.json({
+      message: "Report updated successfully",
+      report: populated,
+    });
+  } catch (err) {
+    console.error("Error in adminUpdateReportStatus:", err);
+    return res.status(500).json({
+      message: "Failed to update report",
+      error: err.message,
+    });
   }
 };

@@ -18,53 +18,39 @@ export default function CourseDetails() {
   const [certificate, setCertificate] = useState(null);
   const [certificateError, setCertificateError] = useState("");
 
-  // 🔹 NEW: prerequisites state
-  const [prerequisiteProgress, setPrerequisiteProgress] = useState([]);
-  const [missingPrereqs, setMissingPrereqs] = useState([]);
-
-  const isStudent = auth?.user?.role === "student";
-  const isInstructor = auth?.user?.role === "instructor";
-
   useEffect(() => {
     if (!auth?.token) return;
 
     const fetchCourse = async () => {
       try {
-        setError("");
-        setEnrollMsg("");
-
         const res = await axios.get(`http://localhost:5000/api/courses/${id}`, {
           headers: { Authorization: `Bearer ${auth.token}` },
         });
 
-        // Backend now returns { course, prerequisiteProgress } for students
-        const apiCourse = res.data.course || res.data;
-        const prereqProg = res.data.prerequisiteProgress || [];
+        const courseData = res.data.course;
 
-        if (isStudent && apiCourse.status !== "published") {
+        if (
+          auth?.user?.role === "student" &&
+          courseData.status !== "published"
+        ) {
           setError("This course is not available for students");
         } else {
-          setCourse(apiCourse);
-          setAnnouncements(apiCourse.announcements || []);
-          setPrerequisiteProgress(prereqProg);
-          setMissingPrereqs([]);
+          setCourse(courseData);
+          setAnnouncements(courseData.announcements || []);
         }
       } catch (err) {
-        console.error(err);
-        setError(
-          err.response?.data?.message || "Failed to load course details"
-        );
+        setError("Failed to load course details");
       } finally {
         setLoading(false);
       }
     };
 
     fetchCourse();
-  }, [id, auth?.token, isStudent]);
+  }, [id, auth?.token, auth?.user?.role]);
 
-  // 🔹 Load certificate info for this course (student only)
+  // 🔹 NEW: certificate fetch
   useEffect(() => {
-    if (!auth?.token || !isStudent || !course) return;
+    if (!auth?.token || auth?.user?.role !== "student" || !course) return;
 
     const fetchCertificateForCourse = async () => {
       try {
@@ -75,9 +61,7 @@ export default function CourseDetails() {
           }
         );
         const certs = res.data.certificates || [];
-        const found = certs.find(
-          (c) => c.course && c.course._id?.toString() === id
-        );
+        const found = certs.find((c) => c.course && c.course._id === id);
         if (found) {
           setCertificate(found);
           setCertificateError("");
@@ -91,7 +75,7 @@ export default function CourseDetails() {
     };
 
     fetchCertificateForCourse();
-  }, [auth?.token, isStudent, course, id]);
+  }, [auth?.token, auth?.user?.role, course, id]);
 
   useEffect(() => {
     if (!window.YT) {
@@ -103,21 +87,15 @@ export default function CourseDetails() {
 
   const handleEnroll = async () => {
     try {
-      setEnrollMsg("");
-      setMissingPrereqs([]);
-
       const res = await axios.post(
         `http://localhost:5000/api/courses/${id}/enroll`,
         {},
         { headers: { Authorization: `Bearer ${auth.token}` } }
       );
-      setEnrollMsg(res.data.message || "Enrolled successfully");
+      setEnrollMsg(res.data.message);
       setCourse(res.data.course);
     } catch (err) {
-      console.error(err);
-      const msg = err.response?.data?.message || "Failed to enroll";
-      setEnrollMsg(msg);
-      setMissingPrereqs(err.response?.data?.missingPrerequisites || []);
+      setEnrollMsg(err.response?.data?.message || "Failed to enroll");
     }
   };
 
@@ -126,11 +104,7 @@ export default function CourseDetails() {
       const studentProgress = course.completedLessons?.find(
         (cl) => cl.student.toString() === auth.user.id
       );
-
-      const alreadyCompleted = studentProgress?.lessons?.some(
-        (lId) => lId.toString() === lessonId.toString()
-      );
-      if (alreadyCompleted) return;
+      if (studentProgress?.lessons.includes(lessonId)) return;
 
       const res = await axios.post(
         `http://localhost:5000/api/courses/${id}/lessons/${lessonId}/complete`,
@@ -145,21 +119,15 @@ export default function CourseDetails() {
       }
 
       setCourse((prevCourse) => {
-        if (!prevCourse) return prevCourse;
-
-        const updatedCompletedLessons = [
-          ...(prevCourse.completedLessons || []),
-        ];
+        const updatedCompletedLessons = [...prevCourse.completedLessons];
         const existingStudent = updatedCompletedLessons.find(
           (cl) => cl.student.toString() === auth.user.id
         );
 
         if (existingStudent) {
-          const updatedLessonIds = new Set(
-            existingStudent.lessons.map((l) => l.toString())
-          );
-          updatedLessonIds.add(lessonId.toString());
-          existingStudent.lessons = Array.from(updatedLessonIds);
+          existingStudent.lessons = [
+            ...new Set([...existingStudent.lessons, lessonId]),
+          ];
         } else {
           updatedCompletedLessons.push({
             student: auth.user.id,
@@ -272,20 +240,12 @@ export default function CourseDetails() {
   };
 
   const isLessonLocked = (lessonIndex) => {
-    if (!course || !auth?.user) return false;
     if (lessonIndex === 0) return false;
-
     const studentProgress = course.completedLessons?.find(
       (cl) => cl.student.toString() === auth.user.id
     );
-    if (!studentProgress) return true;
-
-    const prevLessonId = course.lessons[lessonIndex - 1]._id.toString();
-    const hasPrevCompleted = studentProgress.lessons?.some(
-      (lId) => lId.toString() === prevLessonId
-    );
-
-    return !hasPrevCompleted;
+    const prevLessonId = course.lessons[lessonIndex - 1]._id;
+    return !studentProgress?.lessons.includes(prevLessonId);
   };
 
   const handleAddAnnouncement = async () => {
@@ -319,7 +279,6 @@ export default function CourseDetails() {
       (studentId) => studentId.toString() === auth.user.id
     ) || false;
 
-  // Progress calculation
   let progress = 0;
   if (alreadyEnrolled) {
     const totalLessons = course.lessons?.length || 1;
@@ -328,32 +287,16 @@ export default function CourseDetails() {
     );
     const completedCount =
       studentCompleted?.lessons.filter((lessonId) =>
-        course.lessons.some((l) => l._id.toString() === lessonId.toString())
+        course.lessons.some((l) => l._id === lessonId)
       ).length || 0;
     progress = Math.floor((completedCount / totalLessons) * 100);
   }
 
   const isNew = (date) => {
-    if (!date) return false;
     const created = new Date(date);
     const now = new Date();
     const diffDays = (now - created) / (1000 * 60 * 60 * 24);
     return diffDays <= 3;
-  };
-
-  const hasPrereqCourses =
-    Array.isArray(course.prerequisites) && course.prerequisites.length > 0;
-
-  const getPrereqStatusBadge = (status) => {
-    switch (status) {
-      case "completed":
-        return "bg-green-100 text-green-800";
-      case "in_progress":
-        return "bg-blue-100 text-blue-800";
-      case "not_started":
-      default:
-        return "bg-gray-100 text-gray-700";
-    }
   };
 
   return (
@@ -370,7 +313,7 @@ export default function CourseDetails() {
                 </span>
               )}
               {course.status && (
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-green-50 text-green-700 font-semibold capitalize">
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-green-50 text-green-700 font-semibold">
                   {course.status}
                 </span>
               )}
@@ -418,92 +361,6 @@ export default function CourseDetails() {
         </div>
       </div>
 
-      {/* 🔗 Prerequisite Courses */}
-      {hasPrereqCourses && (
-        <div className="bg-white shadow rounded p-4 space-y-3">
-          <div className="flex items-center justify-between gap-2">
-            <h4 className="text-lg font-semibold flex items-center gap-2">
-              🔗 Prerequisite Courses
-            </h4>
-            {isStudent && (
-              <span className="text-xs text-gray-500">
-                You need to complete these before enrolling.
-              </span>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            {course.prerequisites.map((pre) => {
-              const progressInfo =
-                prerequisiteProgress?.find(
-                  (p) =>
-                    p.courseId === pre._id?.toString() || p.courseId === pre._id
-                ) || {};
-              const progressValue = progressInfo.progress ?? 0;
-              const status = progressInfo.status || "not_started";
-
-              return (
-                <div
-                  key={pre._id}
-                  className="border rounded p-2 flex flex-col gap-1 bg-slate-50"
-                >
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="font-medium text-sm">
-                        {pre.title || "Untitled course"}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {pre.category || "General"}
-                      </p>
-                    </div>
-                    {isStudent && (
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${getPrereqStatusBadge(
-                          status
-                        )}`}
-                      >
-                        {status === "completed"
-                          ? "Completed"
-                          : status === "in_progress"
-                          ? "In progress"
-                          : "Not started"}
-                      </span>
-                    )}
-                  </div>
-
-                  {isStudent && (
-                    <div className="mt-1">
-                      <div className="w-full bg-gray-200 h-2 rounded-full">
-                        <div
-                          className="bg-emerald-500 h-2 rounded-full transition-all"
-                          style={{ width: `${progressValue}%` }}
-                        ></div>
-                      </div>
-                      <p className="text-[11px] text-gray-500 mt-1">
-                        {progressValue}% completed
-                      </p>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          {isStudent && missingPrereqs.length > 0 && (
-            <div className="mt-2 p-2 border border-amber-300 bg-amber-50 rounded">
-              <p className="text-xs text-amber-800 font-medium">
-                You must complete these before enrolling:
-              </p>
-              <ul className="list-disc list-inside text-xs text-amber-900 mt-1">
-                {missingPrereqs.map((m) => (
-                  <li key={m._id}>{m.title}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
-      )}
-
       {/* Important Dates */}
       <div className="bg-white shadow rounded p-4 space-y-2">
         <h4 className="text-xl font-semibold">Important Dates</h4>
@@ -538,7 +395,7 @@ export default function CourseDetails() {
             ></div>
           </div>
 
-          {/* Certificate banner when course is fully completed */}
+          {/* 🔹 NEW: Certificate banner when course is fully completed */}
           {progress === 100 && (
             <div className="mt-4 p-3 border border-green-300 bg-green-50 rounded">
               {certificate ? (
@@ -597,8 +454,8 @@ export default function CourseDetails() {
         </div>
       )}
 
-      {isStudent && (
-        <div className="flex flex-wrap gap-2 items-center">
+      {auth.user?.role === "student" && (
+        <div className="flex flex-wrap gap-2">
           {!alreadyEnrolled ? (
             <button
               className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 shadow"
@@ -622,33 +479,22 @@ export default function CourseDetails() {
               Book Consultation
             </Link>
           )}
-
-          {enrollMsg && (
-            <span
-              className={`text-sm ${
-                enrollMsg.toLowerCase().includes("success") ||
-                enrollMsg.toLowerCase().includes("enrolled")
-                  ? "text-green-600"
-                  : "text-red-600"
-              }`}
-            >
-              {enrollMsg}
-            </span>
-          )}
         </div>
       )}
 
       <Link
         to={`/student/courses/${id}/discussion`}
-        className="px-4 py-2 bg-indigo-500 text-white rounded hover:bg-indigo-600 shadow inline-block"
+        className="px-4 py-2 bg-indigo-500 text-white rounded hover:bg-indigo-600 shadow"
       >
         Go to Discussion Board
       </Link>
 
+      {enrollMsg && <p className="text-green-600">{enrollMsg}</p>}
+
       {/* Announcements */}
       <div className="bg-white shadow rounded p-4 space-y-2">
         <h4 className="text-xl font-semibold">Announcements</h4>
-        {isInstructor && (
+        {auth.user.role === "instructor" && (
           <div className="flex gap-2">
             <input
               type="text"
@@ -671,7 +517,7 @@ export default function CourseDetails() {
           <ul className="divide-y divide-gray-200">
             {announcements.map((a) => (
               <li
-                key={a._id || a.createdAt}
+                key={a._id}
                 className="py-2 flex justify-between items-center"
               >
                 {a.content}
@@ -695,12 +541,10 @@ export default function CourseDetails() {
           <div className="flex flex-col md:flex-row gap-4">
             <div className="md:w-1/3 border rounded divide-y divide-gray-200">
               {course.lessons?.map((lesson, index) => {
-                const studentProgress = course.completedLessons?.find(
-                  (cl) => cl.student.toString() === auth.user.id
-                );
-                const completed = studentProgress?.lessons?.some(
-                  (lId) => lId.toString() === lesson._id.toString()
-                );
+                const completed =
+                  course.completedLessons
+                    ?.find((cl) => cl.student.toString() === auth.user.id)
+                    ?.lessons.includes(lesson._id) || false;
                 const locked = isLessonLocked(index);
 
                 return (

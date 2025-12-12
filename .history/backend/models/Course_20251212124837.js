@@ -1,48 +1,31 @@
 // backend/models/Course.js
 import mongoose from "mongoose";
 
-/**
- * LESSON SUB-DOCUMENT
- * Matches how lessons are created in courseController:
- *   course.lessons.push({ title, contentType, url })
- */
 const lessonSchema = new mongoose.Schema(
   {
-    title: { type: String, required: true, trim: true },
-    contentType: {
-      type: String,
-      enum: ["video", "pdf", "doc"],
-      required: true,
-    },
-    url: { type: String, required: true },
+    title: { type: String, required: true },
+    content: { type: String },
+    videoUrl: { type: String },
+    resources: [{ type: String }],
     durationMinutes: { type: Number, default: 0 },
     isLocked: { type: Boolean, default: false },
   },
   { _id: true }
 );
 
-/**
- * ANNOUNCEMENT SUB-DOCUMENT
- * Matches how you use it in:
- *  - addAnnouncement (title + content)
- *  - CourseDetails UI (a.content, a.createdAt)
- */
 const announcementSchema = new mongoose.Schema(
   {
-    title: { type: String, required: true, trim: true },
-    content: { type: String, required: true }, // ✅ was "message" before
+    title: { type: String, required: true },
+    message: { type: String, required: true },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: false, // ✅ make optional so old data doesn't break
+      required: true,
     },
   },
-  { timestamps: true } // gives createdAt / updatedAt -> used in isNew()
+  { timestamps: true }
 );
 
-/**
- * COMPLETED LESSONS PER STUDENT
- */
 const completedLessonSchema = new mongoose.Schema(
   {
     student: {
@@ -63,15 +46,13 @@ const completedLessonSchema = new mongoose.Schema(
   { _id: false }
 );
 
-/**
- * MAIN COURSE SCHEMA
- */
 const courseSchema = new mongoose.Schema(
   {
     title: {
       type: String,
       required: true,
       trim: true,
+      unique: false,
     },
     description: {
       type: String,

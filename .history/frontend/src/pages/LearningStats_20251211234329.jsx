@@ -11,7 +11,7 @@ export default function LearningStats() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // 🔹 Download Progress Report (PDF)
+  // 🔹 NEW: Download Progress Report (PDF)
   const handleDownloadReport = async () => {
     try {
       const res = await axios.get(
@@ -41,7 +41,6 @@ export default function LearningStats() {
     }
   };
 
-  // 👁 Preview Progress Report (PDF in new tab)
   const handlePreviewReport = async () => {
     try {
       const res = await axios.get(
@@ -55,6 +54,7 @@ export default function LearningStats() {
       const blob = new Blob([res.data], { type: "application/pdf" });
       const url = window.URL.createObjectURL(blob);
 
+      // open PDF in a new tab as a preview
       window.open(url, "_blank");
     } catch (err) {
       console.error(err);
@@ -64,6 +64,37 @@ export default function LearningStats() {
       );
     }
   };
+
+  <div className="flex gap-2">
+    <Link
+      to="/student"
+      className="px-4 py-2 text-sm bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300"
+    >
+      ⬅ Back to Dashboard
+    </Link>
+    <Link
+      to="/student/certificates"
+      className="px-4 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+    >
+      🎓 My Certificates
+    </Link>
+
+    {/* existing download button */}
+    <button
+      onClick={handleDownloadReport}
+      className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700"
+    >
+      ⬇ Download Report (PDF)
+    </button>
+
+    {/* ⭐ NEW preview button */}
+    <button
+      onClick={handlePreviewReport}
+      className="px-4 py-2 text-sm bg-white border border-green-600 text-green-700 rounded-lg hover:bg-green-50"
+    >
+      👁 Preview Report
+    </button>
+  </div>;
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -157,21 +188,12 @@ export default function LearningStats() {
           >
             🎓 My Certificates
           </Link>
-
-          {/* Download PDF */}
+          {/* 🔹 NEW: Export PDF button */}
           <button
             onClick={handleDownloadReport}
             className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700"
           >
-            ⬇ Download Report (PDF)
-          </button>
-
-          {/* Preview PDF in new tab */}
-          <button
-            onClick={handlePreviewReport}
-            className="px-4 py-2 text-sm bg-white border border-green-600 text-green-700 rounded-lg hover:bg-green-50"
-          >
-            👁 Preview Report
+            ⬇ Export Progress Report (PDF)
           </button>
         </div>
       </div>
@@ -220,16 +242,12 @@ export default function LearningStats() {
           <div className="space-y-2">
             {activityLast7Days.map((day) => {
               const width =
-                maxMinutesInWeek === 30
-                  ? Math.max(
-                      5,
-                      Math.round((day.minutes / maxMinutesInWeek) * 100)
-                    )
+                maxMinutesInWeek === 0
+                  ? 0
                   : Math.max(
                       5,
                       Math.round((day.minutes / maxMinutesInWeek) * 100)
                     );
-
               const dateLabel = new Date(day.date).toLocaleDateString(
                 undefined,
                 {

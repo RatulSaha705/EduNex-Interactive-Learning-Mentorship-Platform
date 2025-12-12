@@ -14,7 +14,6 @@ import certificateRoutes from "./routes/certificateRoutes.js";
 import statsRoutes from "./routes/statsRoutes.js";
 import reportRoutes from "./routes/reportRoutes.js";
 import recommendationRoutes from "./routes/recommendationRoutes.js";
-import adminRoutes from "./routes/adminRoutes.js";
 
 dotenv.config();
 connectDB();
@@ -34,7 +33,6 @@ app.use("/api/certificates", certificateRoutes);
 app.use("/api/stats", statsRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/recommendations", recommendationRoutes);
-app.use("/api/admin", adminRoutes);
 
 // Test route
 app.get("/", (req, res) => {
