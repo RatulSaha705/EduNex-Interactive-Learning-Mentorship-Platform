@@ -22,7 +22,26 @@ export default function InstructorConsultationSchedule() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
-  const isInstructor = auth?.user?.role === "instructor";
+  // Guard: only instructors
+  if (!auth?.user) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 mt-10 text-center">
+        <p className="text-red-600 font-semibold">
+          Please log in to manage consultation availability.
+        </p>
+      </div>
+    );
+  }
+
+  if (auth.user.role !== "instructor") {
+    return (
+      <div className="max-w-4xl mx-auto px-4 mt-10 text-center">
+        <p className="text-red-600 font-semibold">
+          Only instructors can manage consultation schedules.
+        </p>
+      </div>
+    );
+  }
 
   // Fetch availability when date changes
   useEffect(() => {
@@ -128,27 +147,6 @@ export default function InstructorConsultationSchedule() {
   };
 
   const hasExistingConfig = !!availability;
-
-  // 🔐 Auth guards (AFTER hooks)
-  if (!auth?.user) {
-    return (
-      <div className="max-w-4xl mx-auto px-4 mt-10 text-center">
-        <p className="text-red-600 font-semibold">
-          Please log in to manage consultation availability.
-        </p>
-      </div>
-    );
-  }
-
-  if (!isInstructor) {
-    return (
-      <div className="max-w-4xl mx-auto px-4 mt-10 text-center">
-        <p className="text-red-600 font-semibold">
-          Only instructors can manage consultation schedules.
-        </p>
-      </div>
-    );
-  }
 
   return (
     <div className="max-w-5xl mx-auto px-4 mt-8 space-y-6">

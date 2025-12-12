@@ -65,7 +65,7 @@ export default function Profile() {
     setMessage("");
     setSaving(true);
 
-    try {
+    try:
       const payload = {};
       if (form.name) payload.name = form.name;
       if (form.email) payload.email = form.email;
@@ -148,7 +148,7 @@ export default function Profile() {
             )}
           </div>
 
-          {/* Avatar initials */}
+          {/* Avatar-ish initials */}
           <div className="flex items-center gap-3">
             <div className="h-12 w-12 rounded-full bg-gradient-to-br from-indigo-500 to-sky-500 flex items-center justify-center text-white font-semibold text-lg shadow-md">
               {form.name
