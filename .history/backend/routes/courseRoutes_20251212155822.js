@@ -43,13 +43,6 @@ router.delete(
   authorizeRoles("instructor"),
   deleteLesson
 );
-// DELETE a course (instructor or admin)
-router.delete(
-  "/:id",
-  protect,
-  authorizeRoles("instructor", "admin"),
-  deleteCourse
-);
 
 // ✅ Add announcement
 router.post(
