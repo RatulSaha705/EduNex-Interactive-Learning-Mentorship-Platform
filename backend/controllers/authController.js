@@ -1,6 +1,7 @@
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import Notification from "../models/Notification.js";
 
 // helper to generate JWT
 const generateToken = (user) => {
@@ -36,6 +37,29 @@ export const registerUser = async (req, res) => {
     });
 
     await newUser.save();
+
+    // 🔔 Notify admins: new instructor registered (do not block main flow)
+if (newUser.role === "instructor") {
+  try {
+    const admins = await User.find({ role: "admin" }).select("_id");
+
+    if (admins.length > 0) {
+      const notifications = admins.map((a) => ({
+        user: a._id,
+        type: "instructor_registered",
+        title: "New instructor registered",
+        message: `Instructor "${newUser.name}" has registered (${newUser.email}).`,
+        link: "/admin",
+      }));
+
+      await Notification.insertMany(notifications);
+    }
+  } catch (notifyErr) {
+    console.error("Error notifying admins about new instructor:", notifyErr);
+  }
+}
+
+
 
     const token = generateToken(newUser);
 

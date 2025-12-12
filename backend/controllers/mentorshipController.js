@@ -647,6 +647,7 @@ export const getTodaySessionsForInstructor = async (req, res) => {
     const startOfDay = new Date(now);
     startOfDay.setHours(0, 0, 0, 0);
     const endOfDay = new Date(now);
+    endOfDay.setDate(endOfDay.getDate() + 4); 
     endOfDay.setHours(23, 59, 59, 999);
 
     const sessions = await MentorshipSession.find({

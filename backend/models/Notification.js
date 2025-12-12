@@ -26,6 +26,9 @@ const notificationSchema = new Schema(
         "lesson_added",           // new lesson added in enrolled course
         "student_enrolled",
         "question_asked", 
+        "content_reported",        // admin: someone reported something
+        "course_created",          // admin: new course created
+        "instructor_registered", 
       ],
       required: true,
     },
