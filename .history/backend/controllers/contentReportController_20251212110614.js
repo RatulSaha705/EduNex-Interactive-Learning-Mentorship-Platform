@@ -1,25 +1,24 @@
 // backend/controllers/contentReportController.js
-import Report from "../models/Report.js";
+import ContentReport from "../models/ContentReport.js";
 import Course from "../models/Course.js";
 import Question from "../models/Question.js";
 import Answer from "../models/Answer.js";
 import User from "../models/User.js";
 
 /**
- * POST /api/reports/content   (also wired as POST /api/reports)
- * Body: { targetType, targetId, reason, details? }
+ * POST /api/reports/content
+ * Body: { targetType, targetId, reason }
  * targetType: "course" | "question" | "answer" | "user"
- * Auth: any logged-in user
  */
 export const createContentReport = async (req, res) => {
   try {
     const reporterId = req.user.id || req.user._id;
-    const { targetType, targetId, reason, details } = req.body;
+    const { targetType, targetId, reason } = req.body;
 
-    if (!targetType || !targetId || !reason || !reason.trim()) {
-      return res.status(400).json({
-        message: "targetType, targetId and a non-empty reason are required.",
-      });
+    if (!targetType || !targetId) {
+      return res
+        .status(400)
+        .json({ message: "targetType and targetId are required." });
     }
 
     const allowedTypes = ["course", "question", "answer", "user"];
@@ -27,64 +26,28 @@ export const createContentReport = async (req, res) => {
       return res.status(400).json({ message: "Invalid targetType." });
     }
 
-    let courseId = null;
-    let targetSummary = "";
+    const reportData = {
+      reportedBy: reporterId,
+      targetType,
+      reason: (reason || "").trim(),
+    };
 
+    // Attach the specific field based on targetType
     if (targetType === "course") {
-      const course = await Course.findById(targetId).select(
-        "title description"
-      );
-      if (!course) {
-        return res.status(404).json({ message: "Course not found" });
-      }
-      courseId = course._id;
-      targetSummary = `${course.title} – ${
-        course.description?.slice(0, 120) || ""
-      }`.trim();
+      reportData.course = targetId;
     } else if (targetType === "question") {
-      const question = await Question.findById(targetId).select(
-        "title content course"
-      );
-      if (!question) {
-        return res.status(404).json({ message: "Question not found" });
-      }
-      courseId = question.course || null;
-      targetSummary = `${question.title || "Question"} – ${
-        question.content?.slice(0, 120) || ""
-      }`.trim();
+      reportData.question = targetId;
     } else if (targetType === "answer") {
-      const answer = await Answer.findById(targetId)
-        .select("content question")
-        .populate("question", "course");
-      if (!answer) {
-        return res.status(404).json({ message: "Answer not found" });
-      }
-      courseId = answer.question?.course || null;
-      targetSummary = answer.content?.slice(0, 140) || "Answer";
+      reportData.answer = targetId;
     } else if (targetType === "user") {
-      const reportedUser = await User.findById(targetId).select(
-        "name email role"
-      );
-      if (!reportedUser) {
-        return res.status(404).json({ message: "User not found" });
-      }
-      targetSummary = `User: ${reportedUser.name} (${reportedUser.email}) – role: ${reportedUser.role}`;
+      reportData.user = targetId;
     }
 
-    const report = await Report.create({
-      reporter: reporterId,
-      targetType,
-      targetId,
-      course: courseId,
-      targetSummary,
-      reason: reason.trim(),
-      details,
-    });
+    const report = await ContentReport.create(reportData);
 
     return res.status(201).json({
       message: "Report submitted. Thank you for helping keep EduNex safe.",
       reportId: report._id,
-      report,
     });
   } catch (err) {
     console.error("Error in createContentReport:", err);
@@ -103,11 +66,12 @@ export const getMyContentReports = async (req, res) => {
   try {
     const reporterId = req.user.id || req.user._id;
 
-    const reports = await Report.find({ reporter: reporterId })
+    const reports = await ContentReport.find({ reportedBy: reporterId })
       .sort({ createdAt: -1 })
       .populate("course", "title category")
-      .populate("reporter", "name email role")
-      .populate("resolvedBy", "name email role")
+      .populate("question", "title content")
+      .populate("answer", "content")
+      .populate("user", "name email role")
       .lean();
 
     res.json({ reports });
@@ -121,7 +85,7 @@ export const getMyContentReports = async (req, res) => {
 };
 
 /**
- * GET /api/reports
+ * GET /api/admin/reports
  * Admin: list all content reports (with optional filters)
  * Query: ?status=open|in_review|resolved|dismissed&targetType=course|question|answer|user
  */
@@ -137,11 +101,14 @@ export const adminGetReports = async (req, res) => {
     if (status) filter.status = status;
     if (targetType) filter.targetType = targetType;
 
-    const reports = await Report.find(filter)
+    const reports = await ContentReport.find(filter)
       .sort({ createdAt: -1 })
-      .populate("reporter", "name email role")
-      .populate("resolvedBy", "name email role")
+      .populate("reportedBy", "name email role")
+      .populate("reviewedBy", "name email role")
       .populate("course", "title category")
+      .populate("question", "title content")
+      .populate("answer", "content")
+      .populate("user", "name email role")
       .lean();
 
     res.json({ reports });
@@ -155,9 +122,8 @@ export const adminGetReports = async (req, res) => {
 };
 
 /**
- * PATCH /api/reports/:id/status
- * Body: { status?, resolutionNotes? }  (also accepts resolutionNote for convenience)
- * Admin only
+ * PATCH /api/admin/reports/:id
+ * Body: { status?, resolutionNote? }
  */
 export const adminUpdateReportStatus = async (req, res) => {
   try {
@@ -166,34 +132,33 @@ export const adminUpdateReportStatus = async (req, res) => {
     }
 
     const { id } = req.params;
-    const { status, resolutionNote, resolutionNotes } = req.body;
+    const { status, resolutionNote } = req.body;
 
     const allowedStatuses = ["open", "in_review", "resolved", "dismissed"];
     if (status && !allowedStatuses.includes(status)) {
       return res.status(400).json({ message: "Invalid status value" });
     }
 
-    const report = await Report.findById(id);
+    const report = await ContentReport.findById(id);
     if (!report) {
       return res.status(404).json({ message: "Report not found" });
     }
 
     if (status) report.status = status;
+    if (resolutionNote !== undefined) report.resolutionNote = resolutionNote;
 
-    const notes = resolutionNotes ?? resolutionNote;
-    if (typeof notes === "string") {
-      report.resolutionNotes = notes;
-    }
-
-    report.resolvedBy = req.user._id || req.user.id;
+    report.reviewedBy = req.user._id || req.user.id;
+    report.reviewedAt = new Date();
 
     await report.save();
 
-    const populated = await Report.findById(id)
-      .populate("reporter", "name email role")
-      .populate("resolvedBy", "name email role")
+    const populated = await report
+      .populate("reportedBy", "name email role")
+      .populate("reviewedBy", "name email role")
       .populate("course", "title category")
-      .lean();
+      .populate("question", "title content")
+      .populate("answer", "content")
+      .populate("user", "name email role");
 
     res.json({
       message: "Report updated successfully",

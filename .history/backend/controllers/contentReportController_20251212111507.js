@@ -6,7 +6,7 @@ import Answer from "../models/Answer.js";
 import User from "../models/User.js";
 
 /**
- * POST /api/reports/content   (also wired as POST /api/reports)
+ * POST /api/reports/content
  * Body: { targetType, targetId, reason, details? }
  * targetType: "course" | "question" | "answer" | "user"
  * Auth: any logged-in user
@@ -16,9 +16,9 @@ export const createContentReport = async (req, res) => {
     const reporterId = req.user.id || req.user._id;
     const { targetType, targetId, reason, details } = req.body;
 
-    if (!targetType || !targetId || !reason || !reason.trim()) {
+    if (!targetType || !targetId || !reason) {
       return res.status(400).json({
-        message: "targetType, targetId and a non-empty reason are required.",
+        message: "targetType, targetId and reason are required.",
       });
     }
 
@@ -121,7 +121,7 @@ export const getMyContentReports = async (req, res) => {
 };
 
 /**
- * GET /api/reports
+ * GET /api/admin/reports
  * Admin: list all content reports (with optional filters)
  * Query: ?status=open|in_review|resolved|dismissed&targetType=course|question|answer|user
  */
@@ -155,9 +155,8 @@ export const adminGetReports = async (req, res) => {
 };
 
 /**
- * PATCH /api/reports/:id/status
+ * PATCH /api/admin/reports/:id
  * Body: { status?, resolutionNotes? }  (also accepts resolutionNote for convenience)
- * Admin only
  */
 export const adminUpdateReportStatus = async (req, res) => {
   try {

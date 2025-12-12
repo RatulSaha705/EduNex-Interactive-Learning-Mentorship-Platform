@@ -3,6 +3,11 @@ import PDFDocument from "pdfkit";
 import User from "../models/User.js";
 import { calculateLearningStats } from "./statsController.js";
 
+import Report from "../models/Report.js";
+import Course from "../models/Course.js";
+import Question from "../models/Question.js";
+import Answer from "../models/Answer.js";
+
 /** --------- Constants (colors / fonts) --------- **/
 const COLORS = {
   primary: "#1D4ED8", // blue-700
@@ -332,11 +337,11 @@ function drawActivityGrid(doc, activityLast7Days) {
   doc.y = rowY + 22;
 }
 
-/** ===================== PROGRESS REPORT (PDF) ===================== **/
+/** ===================== MAIN CONTROLLER ===================== **/
 
 export const generateProgressReport = async (req, res) => {
   try {
-    const studentId = req.user.id || req.user._id;
+    const studentId = req.user.id;
 
     const user = await User.findById(studentId).select("name email");
     if (!user) {
@@ -352,7 +357,7 @@ export const generateProgressReport = async (req, res) => {
     const contentWidth = pageWidth - left - right;
 
     res.setHeader("Content-Type", "application/pdf");
-    // inline = browser preview; change to attachment for forced download
+    // inside generateProgressReport
     res.setHeader(
       "Content-Disposition",
       'inline; filename="edunex-progress-report.pdf"'
