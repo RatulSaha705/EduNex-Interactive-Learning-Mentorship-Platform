@@ -4,7 +4,7 @@ import express from "express";
 import {
   getMyAvailability,
   upsertAvailabilityForDate,
-  deleteAvailabilityDay,
+  
   getAvailableSlotsForCourse,
   bookSession,
   getTodaySessionsForInstructor,
@@ -37,12 +37,12 @@ router.post(
 );
 
 // Delete a specific day's availability
-router.delete(
-  "/availability/:id",
-  protect,
-  authorizeRoles("instructor"),
-  deleteAvailabilityDay
-);
+// router.delete(
+//   "/availability/:id",
+//   protect,
+//   authorizeRoles("instructor"),
+//   deleteAvailabilityDay
+// );
 
 /* ---------- Student: view slots & book ---------- */
 

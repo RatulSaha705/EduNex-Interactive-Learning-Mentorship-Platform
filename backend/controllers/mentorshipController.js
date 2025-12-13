@@ -224,6 +224,80 @@ export const upsertAvailabilityForDate = async (req, res) => {
       }
     }
 
+
+    if (!isBlocked) {
+      try {
+        const now = new Date();
+        const dayEnd = new Date(`${date}T23:59:59.999`);
+
+        // All *booked* upcoming sessions for this instructor on this date
+        const sessions = await MentorshipSession.find({
+          instructor: instructorId,
+          status: "booked",
+          startTime: { $gte: now, $lte: dayEnd },
+        }).populate("student course", "name title");
+
+        // Convert new availability ranges to minutes
+        const rangesMinutes = (updated.timeRanges || []).map((range) => ({
+          start: timeStringToMinutes(range.startTime),
+          end: timeStringToMinutes(range.endTime),
+        }));
+
+        const sessionsToCancel = [];
+
+        for (const s of sessions) {
+          const startMinutes =
+            s.startTime.getHours() * 60 + s.startTime.getMinutes();
+          const endMinutes =
+            s.endTime.getHours() * 60 + s.endTime.getMinutes();
+
+          // Is there ANY new range that fully contains this session?
+          const fitsAnyRange = rangesMinutes.some(
+            (r) => startMinutes >= r.start && endMinutes <= r.end
+          );
+
+          if (!fitsAnyRange) {
+            sessionsToCancel.push(s);
+          }
+        }
+
+        // Cancel those sessions and notify the students
+        for (const s of sessionsToCancel) {
+          s.status = "cancelledByInstructor";
+          await s.save();
+
+          try {
+            const studentId = s.student?._id || s.student;
+            const instructorName = req.user?.name || "Your instructor";
+            const courseTitle = s.course?.title || "a course";
+            const startStr = s.startTime.toLocaleString();
+
+            await Notification.create({
+              user: studentId,
+              type: "cancelledByInstructor", // new enum value
+              title: "Your consultation was cancelled",
+              message: `${instructorName} cancelled your consultation on ${startStr} for "${courseTitle}".`,
+              link: "/student/consultations",
+              course: s.course?._id || s.course,
+            });
+          } catch (notifyErr) {
+            console.error(
+              "Error creating notification for session cancelled by availability change:",
+              notifyErr
+            );
+          }
+        }
+      } catch (err) {
+        console.error(
+          "Error cancelling sessions after availability update:",
+          err
+        );
+        // Don't fail the main request if this part breaks
+      }
+    }    
+
+
+
     res.json(updated);
   } catch (error) {
     console.error("Error in upsertAvailabilityForDate:", error);
@@ -237,104 +311,104 @@ export const upsertAvailabilityForDate = async (req, res) => {
  * DELETE /api/mentorship/availability/:id
  * Delete a specific availability document for the instructor.
  */
-export const deleteAvailabilityDay = async (req, res) => {
-  try {
-    const instructorId = req.user._id || req.user.id;
-    const { id } = req.params;
+// export const deleteAvailabilityDay = async (req, res) => {
+//   try {
+//     const instructorId = req.user._id || req.user.id;
+//     const { id } = req.params;
 
-    const deleted = await InstructorAvailability.findOneAndDelete({
-      _id: id,
-      instructor: instructorId,
-    });
+//     const deleted = await InstructorAvailability.findOneAndDelete({
+//       _id: id,
+//       instructor: instructorId,
+//     });
 
-    if (!deleted) {
-      return res.status(404).json({ message: "Availability not found" });
-    }
+//     if (!deleted) {
+//       return res.status(404).json({ message: "Availability not found" });
+//     }
 
-    const date = deleted.date;
+//     const date = deleted.date;
 
-    if (date) {
-      const now = new Date();
-      const dayEnd = new Date(`${date}T23:59:59.999`);
+//     if (date) {
+//       const now = new Date();
+//       const dayEnd = new Date(`${date}T23:59:59.999`);
 
-      // All *booked* sessions for that date
-      const [sessions, coursesTaught] = await Promise.all([
-        MentorshipSession.find({
-          instructor: instructorId,
-          startTime: { $gte: now, $lte: dayEnd },
-          status: "booked",
-        }).populate("student course", "name title"),
-        Course.find({ instructor: instructorId }).select(
-          "title enrolledStudents"
-        ),
-      ]);
+//       // All *booked* sessions for that date
+//       const [sessions, coursesTaught] = await Promise.all([
+//         MentorshipSession.find({
+//           instructor: instructorId,
+//           startTime: { $gte: now, $lte: dayEnd },
+//           status: "booked",
+//         }).populate("student course", "name title"),
+//         Course.find({ instructor: instructorId }).select(
+//           "title enrolledStudents"
+//         ),
+//       ]);
 
-      // Cancel them
-      if (sessions.length > 0) {
-        await MentorshipSession.updateMany(
-          {
-            instructor: instructorId,
-            startTime: { $gte: now, $lte: dayEnd },
-            status: "booked",
-          },
-          { $set: { status: "cancelledByInstructor" } }
-        );
-      }
+//       // Cancel them
+//       if (sessions.length > 0) {
+//         await MentorshipSession.updateMany(
+//           {
+//             instructor: instructorId,
+//             startTime: { $gte: now, $lte: dayEnd },
+//             status: "booked",
+//           },
+//           { $set: { status: "cancelledByInstructor" } }
+//         );
+//       }
 
-      // All students enrolled in any of this instructor's courses
-      const allStudentIdsSet = new Set();
-      coursesTaught.forEach((course) => {
-        (course.enrolledStudents || []).forEach((sid) =>
-          allStudentIdsSet.add(String(sid))
-        );
-      });
+//       // All students enrolled in any of this instructor's courses
+//       const allStudentIdsSet = new Set();
+//       coursesTaught.forEach((course) => {
+//         (course.enrolledStudents || []).forEach((sid) =>
+//           allStudentIdsSet.add(String(sid))
+//         );
+//       });
 
-      const studentsWithSessionSet = new Set(
-        sessions.map((s) =>
-          s.student?._id ? s.student._id.toString() : s.student.toString()
-        )
-      );
+//       const studentsWithSessionSet = new Set(
+//         sessions.map((s) =>
+//           s.student?._id ? s.student._id.toString() : s.student.toString()
+//         )
+//       );
 
-      const allStudentIds = [...allStudentIdsSet];
+//       const allStudentIds = [...allStudentIdsSet];
 
-      const instructorName = req.user?.name || "Your instructor";
-      const formattedDate = date;
+//       const instructorName = req.user?.name || "Your instructor";
+//       const formattedDate = date;
 
-      const notifications = allStudentIds.map((studentId) => {
-        const hadSession = studentsWithSessionSet.has(studentId);
-        const extra = hadSession
-          ? " Any consultation you booked on this day has been cancelled."
-          : "";
-        return {
-          user: studentId,
-          type: "consultation_blocked",
-          title: "Consultations unavailable",
-          message: `${instructorName} is not available for consultations on ${formattedDate}.${extra}`,
-          link: "/student/consultations",
-        };
-      });
+//       const notifications = allStudentIds.map((studentId) => {
+//         const hadSession = studentsWithSessionSet.has(studentId);
+//         const extra = hadSession
+//           ? " Any consultation you booked on this day has been cancelled."
+//           : "";
+//         return {
+//           user: studentId,
+//           type: "consultation_blocked",
+//           title: "Consultations unavailable",
+//           message: `${instructorName} is not available for consultations on ${formattedDate}.${extra}`,
+//           link: "/student/consultations",
+//         };
+//       });
 
-      if (notifications.length > 0) {
-        try {
-          await Notification.insertMany(notifications);
-        } catch (notifyErr) {
-          console.error(
-            "Error creating notifications for deleted consultation day:",
-            notifyErr
-          );
-        }
-      }
-    }
+//       if (notifications.length > 0) {
+//         try {
+//           await Notification.insertMany(notifications);
+//         } catch (notifyErr) {
+//           console.error(
+//             "Error creating notifications for deleted consultation day:",
+//             notifyErr
+//           );
+//         }
+//       }
+//     }
 
-    res.json({
-      message:
-        "Availability deleted and upcoming sessions for this day were cancelled",
-    });
-  } catch (error) {
-    console.error("Error in deleteAvailabilityDay:", error);
-    res.status(500).json({ message: "Server error deleting availability" });
-  }
-};
+//     res.json({
+//       message:
+//         "Availability deleted and upcoming sessions for this day were cancelled",
+//     });
+//   } catch (error) {
+//     console.error("Error in deleteAvailabilityDay:", error);
+//     res.status(500).json({ message: "Server error deleting availability" });
+//   }
+// };
 
 
 /* ---------- Student: view free slots & book ---------- */

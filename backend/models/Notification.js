@@ -29,6 +29,7 @@ const notificationSchema = new Schema(
         "content_reported",        // admin: someone reported something
         "course_created",          // admin: new course created
         "instructor_registered", 
+        "cancelledByInstructor"
       ],
       required: true,
     },
