@@ -451,7 +451,7 @@ function Navigation() {
                     Dashboard
                   </Link>
 
-                  <Link
+                  {/* <Link
                     to="/instructor/consultations/schedule"
                     className={`${pillGhost} ${
                       isActivePath("/instructor/consultations")
@@ -460,9 +460,9 @@ function Navigation() {
                     }`}
                   >
                     Manage Consultations
-                  </Link>
+                  </Link> */}
 
-                  <Link
+                  {/* <Link
                     to="/instructor/consultations/today"
                     className={`${pillAccent} ${
                       isActivePath("/instructor/consultations/today")
@@ -471,7 +471,7 @@ function Navigation() {
                     }`}
                   >
                     Today&apos;s Consultations
-                  </Link>
+                  </Link> */}
                 </>
               )}
 

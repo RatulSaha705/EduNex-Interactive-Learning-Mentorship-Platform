@@ -296,7 +296,7 @@ export default function InstructorPage() {
           <QuickAction
             to="/instructor/consultations/today"
             icon="⏰"
-            label="Today’s sessions"
+            label="Upcoming sessions"
             description="See who you’re mentoring today"
           />
           <QuickAction
