@@ -23,7 +23,7 @@ export const getMyCourseRecommendations = async (req, res) => {
     let recommendations = [];
     let basedOnCategories = [];
 
-    // 2) If we have history, use top categories (e.g. top 2)
+    //If we have history, use top categories (e.g. top 2)
     if (preferredCategories.length > 0) {
       basedOnCategories = preferredCategories.slice(0, 2);
 
@@ -47,7 +47,7 @@ export const getMyCourseRecommendations = async (req, res) => {
       recommendations = candidateCourses.slice(0, 8);
     }
 
-    // 3) Fallback: if no history OR no candidates, show popular courses in general
+    // if no history OR no candidates, show popular courses in general
     if (recommendations.length === 0) {
       let fallbackCourses = await Course.find({
         status: "published",
@@ -67,7 +67,7 @@ export const getMyCourseRecommendations = async (req, res) => {
       basedOnCategories = [];
     }
 
-    // 4) Shape JSON nicely for frontend
+    // Shape JSON nicely for frontend
     const formatted = recommendations.map((c) => ({
       _id: c._id,
       title: c.title,

@@ -5,7 +5,6 @@ import Report from "../models/Report.js";
 
 /* ===================== USERS ===================== */
 
-// GET /api/admin/users
 export const getAllUsers = async (req, res) => {
   try {
     const users = await User.find()
@@ -22,7 +21,6 @@ export const getAllUsers = async (req, res) => {
   }
 };
 
-// PATCH /api/admin/users/:id/role  { role }
 export const updateUserRole = async (req, res) => {
   try {
     const { id } = req.params;
@@ -63,7 +61,7 @@ export const updateUserRole = async (req, res) => {
   }
 };
 
-// DELETE /api/admin/users/:id
+
 export const deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
@@ -92,7 +90,7 @@ export const deleteUser = async (req, res) => {
 
 /* ===================== COURSES ===================== */
 
-// GET /api/admin/courses
+
 export const getAllCoursesForAdmin = async (req, res) => {
   try {
     const courses = await Course.find()
@@ -125,7 +123,7 @@ export const getAllCoursesForAdmin = async (req, res) => {
   }
 };
 
-// PATCH /api/admin/courses/:id/status  { status }
+
 export const updateCourseStatusAdmin = async (req, res) => {
   try {
     const { id } = req.params;
@@ -161,7 +159,7 @@ export const updateCourseStatusAdmin = async (req, res) => {
 
 /* ===================== REPORTED CONTENT ===================== */
 
-// GET /api/admin/reports
+
 export const getAllContentReports = async (req, res) => {
   try {
     const reports = await Report.find()
@@ -216,7 +214,7 @@ export const getAllContentReports = async (req, res) => {
   }
 };
 
-// PATCH /api/admin/reports/:id/status  { status }
+
 export const updateReportStatus = async (req, res) => {
   try {
     const { id } = req.params;
@@ -252,7 +250,7 @@ export const updateReportStatus = async (req, res) => {
 
 /* ===================== SYSTEM ANALYTICS ===================== */
 
-// GET /api/admin/analytics
+
 export const getSystemAnalytics = async (req, res) => {
   try {
     // ----- User counts -----

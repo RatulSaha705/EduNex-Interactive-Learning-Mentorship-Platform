@@ -6,12 +6,7 @@ import Answer from "../models/Answer.js";
 import User from "../models/User.js";
 import Notification from "../models/Notification.js";
 
-/**
- * POST /api/reports/content   (also wired as POST /api/reports)
- * Body: { targetType, targetId, reason, details? }
- * targetType: "course" | "question" | "answer" | "user"
- * Auth: any logged-in user
- */
+
 export const createContentReport = async (req, res) => {
   try {
     const reporterId = req.user.id || req.user._id;
@@ -83,7 +78,7 @@ export const createContentReport = async (req, res) => {
     });
 
 
-    // 🔔 Notify admins: new content report submitted (do not block main flow)
+    //Notify admins: new content report submitted (do not block main flow)
 try {
   const admins = await User.find({ role: "admin" }).select("_id");
 
@@ -124,10 +119,7 @@ try {
   }
 };
 
-/**
- * GET /api/reports/my-content
- * List reports created by the logged-in user
- */
+
 export const getMyContentReports = async (req, res) => {
   try {
     const reporterId = req.user.id || req.user._id;
@@ -149,11 +141,7 @@ export const getMyContentReports = async (req, res) => {
   }
 };
 
-/**
- * GET /api/reports
- * Admin: list all content reports (with optional filters)
- * Query: ?status=open|in_review|resolved|dismissed&targetType=course|question|answer|user
- */
+
 export const adminGetReports = async (req, res) => {
   try {
     if (req.user.role !== "admin") {
@@ -183,11 +171,7 @@ export const adminGetReports = async (req, res) => {
   }
 };
 
-/**
- * PATCH /api/reports/:id/status
- * Body: { status?, resolutionNotes? }  (also accepts resolutionNote for convenience)
- * Admin only
- */
+
 export const adminUpdateReportStatus = async (req, res) => {
   try {
     if (req.user.role !== "admin") {

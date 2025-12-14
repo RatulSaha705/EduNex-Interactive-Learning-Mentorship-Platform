@@ -119,7 +119,7 @@ export const calculateLearningStats = async (studentId) => {
   };
 };
 
-// GET /api/stats/my  (student only)
+
 export const getMyLearningStats = async (req, res) => {
   try {
     const studentId = req.user.id;

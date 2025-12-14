@@ -2,7 +2,7 @@
 import Certificate from "../models/Certificate.js";
 import Course from "../models/Course.js";
 import User from "../models/User.js";
-//import { issueCertificateOnCourseCompletion } from "./certificateController.js";
+
 
 // ---------- helpers ----------
 
@@ -51,7 +51,7 @@ export const issueCertificateInternal = async ({
 
 // ============ STUDENT ============
 
-// GET /api/certificates/my
+
 export const getMyCertificates = async (req, res) => {
   try {
     const studentId = req.user._id || req.user.id;
@@ -76,7 +76,7 @@ export const getMyCertificates = async (req, res) => {
 
 // ============ INSTRUCTOR / ADMIN ============
 
-// GET /api/certificates/course/:courseId
+
 export const getCourseCertificates = async (req, res) => {
   try {
     const { courseId } = req.params;
@@ -111,7 +111,7 @@ export const getCourseCertificates = async (req, res) => {
   }
 };
 
-// POST /api/certificates/course/:courseId/students/:studentId
+
 export const issueCertificateManually = async (req, res) => {
   try {
     const { courseId, studentId } = req.params;
@@ -167,7 +167,7 @@ export const issueCertificateManually = async (req, res) => {
   }
 };
 
-// PATCH /api/certificates/:id/revoke
+
 export const revokeCertificate = async (req, res) => {
   try {
     const { id } = req.params;
@@ -209,7 +209,7 @@ export const revokeCertificate = async (req, res) => {
   }
 };
 
-// GET /api/certificates/:id
+
 export const getCertificateById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -255,21 +255,9 @@ export const getCertificateById = async (req, res) => {
   }
 };
 
-// ============ AUTOMATIC ISSUING HOOK ============
+// ============ AUTOMATIC ISSUING ============
 
-/**
- * Call this after updating course.completedLessons.
- * If the student has completed all lessons in the course,
- * it will create (or return) a Certificate document.
- *
- * You can use this from completeLesson in courseController like:
- *
- *   import { issueCertificateOnCourseCompletion } from "./certificateController.js";
- *
- *   // inside completeLesson, after saving `course` and computing `progress`
- *   const certificate =
- *     await issueCertificateOnCourseCompletion(course, studentId);
- */
+
 export const issueCertificateOnCourseCompletion = async (course, studentId) => {
   try {
     if (!course || !studentId) return null;
