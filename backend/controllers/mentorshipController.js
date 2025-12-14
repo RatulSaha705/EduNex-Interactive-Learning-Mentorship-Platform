@@ -29,11 +29,7 @@ const combineDateAndTimeToDate = (dateStr, timeStr) => {
 const isValidYyyyMmDd = (dateStr) =>
   typeof dateStr === "string" && /^\d{4}-\d{2}-\d{2}$/.test(dateStr);
 
-/**
- * Add time slots of length 10–30 mins (multiples of 5) inside a free interval.
- * Pushes into slotsArray objects:
- *  { startTime (Date), timeLabel ("HH:mm"), maxDurationMinutes, rangeNote }
- */
+
 const addSlotsFromInterval = (
   intervalStartMinutes,
   intervalEndMinutes,
@@ -49,7 +45,7 @@ const addSlotsFromInterval = (
     const maxDurPossible = intervalEndMinutes - t;
     let maxDuration = Math.min(MAX_DURATION, maxDurPossible);
 
-    // round down to nearest multiple of 5
+    
     maxDuration = Math.floor(maxDuration / 5) * 5;
 
     if (maxDuration < MIN_DURATION) continue;
@@ -71,10 +67,6 @@ const addSlotsFromInterval = (
 
 /* ---------- Instructor: manage availability ---------- */
 
-/**
- * GET /api/mentorship/availability/my?from=YYYY-MM-DD&to=YYYY-MM-DD
- * Get the logged-in instructor's availability in a date range.
- */
 export const getMyAvailability = async (req, res) => {
   try {
     const instructorId = req.user._id || req.user.id;
@@ -99,11 +91,7 @@ export const getMyAvailability = async (req, res) => {
   }
 };
 
-/**
- * POST /api/mentorship/availability
- * Body: { date, timeRanges: [{startTime, endTime, note?}], dayNote?, isBlocked? }
- * Upsert (create or update) availability for a specific date for the instructor.
- */
+
 export const upsertAvailabilityForDate = async (req, res) => {
   try {
     const instructorId = req.user._id || req.user.id;
@@ -148,7 +136,7 @@ export const upsertAvailabilityForDate = async (req, res) => {
       }
     );
 
-    // 🔔 If instructor blocked this day, cancel upcoming sessions and notify all enrolled students
+    // If instructor blocked this day, cancel upcoming sessions and notify all enrolled students
     if (isBlocked) {
       const now = new Date();
       const dayEnd = new Date(`${date}T23:59:59.999`);
@@ -413,11 +401,7 @@ export const upsertAvailabilityForDate = async (req, res) => {
 
 /* ---------- Student: view free slots & book ---------- */
 
-/**
- * GET /api/mentorship/available-slots?courseId=...&date=YYYY-MM-DD
- * Return free slots for a course's instructor on a given date,
- * only if the current user is enrolled in that course.
- */
+
 export const getAvailableSlotsForCourse = async (req, res) => {
   try {
     const studentId = req.user._id || req.user.id;
@@ -558,11 +542,7 @@ export const getAvailableSlotsForCourse = async (req, res) => {
   }
 };
 
-/**
- * POST /api/mentorship/sessions
- * Body: { courseId, date (YYYY-MM-DD), startTime ("HH:mm"), durationMinutes, studentNote? }
- * Book a mentorship session for the logged-in student.
- */
+
 export const bookSession = async (req, res) => {
   try {
     const studentId = req.user._id || req.user.id;
@@ -677,7 +657,7 @@ export const bookSession = async (req, res) => {
       { path: "course", select: "title" },
     ]);
 
-    // 🔔 Notification: instructor gets alert when a student books a session
+    // Notification: instructor gets alert when a student books a session
     try {
       const instructorUserId =
         session.instructor?._id || session.instructor;
@@ -709,10 +689,7 @@ export const bookSession = async (req, res) => {
 
 /* ---------- Instructor: view today's sessions ---------- */
 
-/**
- * GET /api/mentorship/sessions/today
- * Get today's booked sessions for the logged-in instructor.
- */
+
 export const getTodaySessionsForInstructor = async (req, res) => {
   try {
     const instructorId = req.user._id || req.user.id;
@@ -745,10 +722,7 @@ export const getTodaySessionsForInstructor = async (req, res) => {
 
 /* ---------- Student: view & cancel their own sessions ---------- */
 
-/**
- * GET /api/mentorship/sessions/my
- * Get all upcoming sessions for the logged-in student.
- */
+
 export const getMySessionsForStudent = async (req, res) => {
   try {
     const studentId = req.user._id || req.user.id;
@@ -771,10 +745,7 @@ export const getMySessionsForStudent = async (req, res) => {
 };
 
 
-/**
- * DELETE /api/mentorship/sessions/:id
- * Student cancels a booked session (only if more than 12 hours before start).
- */
+
 export const cancelSessionByStudent = async (req, res) => {
   try {
     const studentId = req.user._id || req.user.id;

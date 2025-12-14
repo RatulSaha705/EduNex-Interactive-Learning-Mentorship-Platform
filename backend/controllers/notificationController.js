@@ -1,7 +1,7 @@
 // backend/controllers/notificationController.js
 import Notification from "../models/Notification.js";
 
-// GET /api/notifications?unreadOnly=true&limit=10&page=1
+
 export const getNotifications = async (req, res) => {
   try {
     const userId = req.user._id || req.user.id;
@@ -39,7 +39,7 @@ export const getNotifications = async (req, res) => {
   }
 };
 
-// GET /api/notifications/unread-count
+
 export const getUnreadCount = async (req, res) => {
   try {
     const userId = req.user._id || req.user.id;
@@ -58,7 +58,7 @@ export const getUnreadCount = async (req, res) => {
   }
 };
 
-// PATCH /api/notifications/:id/read
+
 export const markNotificationAsRead = async (req, res) => {
   try {
     const userId = req.user._id || req.user.id;
@@ -88,7 +88,7 @@ export const markNotificationAsRead = async (req, res) => {
   }
 };
 
-// PATCH /api/notifications/mark-all-read
+
 export const markAllNotificationsAsRead = async (req, res) => {
   try {
     const userId = req.user._id || req.user.id;
