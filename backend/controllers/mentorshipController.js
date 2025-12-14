@@ -281,7 +281,7 @@ export const upsertAvailabilityForDate = async (req, res) => {
           "Error cancelling sessions after availability update:",
           err
         );
-        // Don't fail the main request if this part breaks
+      
       }
     }
 

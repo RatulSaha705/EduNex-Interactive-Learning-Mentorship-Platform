@@ -179,9 +179,6 @@ export const getQuestionAnswers = async (req, res) => {
 
 // -------------------- UPVOTE & MARK HELPFUL -------------------- //
 
-// Upvote an answer (any logged-in user)
-// Upvote / un-upvote an answer (toggle, one user = one vote)
-// Upvote / un-upvote an answer (toggle, one user = one vote)
 export const upvoteAnswer = async (req, res) => {
   try {
     const { answerId } = req.params;
@@ -203,11 +200,11 @@ export const upvoteAnswer = async (req, res) => {
     let hasUpvoted;
 
     if (index === -1) {
-      // ✅ First time click → add vote
+      // First time click → add vote
       answer.upvotedBy.push(req.user._id);
       hasUpvoted = true;
     } else {
-      // ✅ Second click → remove vote
+      //  Second click → remove vote
       answer.upvotedBy.splice(index, 1);
       hasUpvoted = false;
     }
@@ -230,10 +227,7 @@ export const upvoteAnswer = async (req, res) => {
   }
 };
 
-/// Mark / unmark an answer as helpful
-// Rules:
-// - ONLY the student who posted the question can do this
-// - Multiple answers can be helpful for the same question
+
 export const markAnswerHelpful = async (req, res) => {
   try {
     const { answerId } = req.params;
@@ -248,7 +242,7 @@ export const markAnswerHelpful = async (req, res) => {
       return res.status(404).json({ message: "Parent question not found" });
     }
 
-    // ✅ Only the question author can mark helpful
+    // Only the question author can mark helpful
     if (question.user.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         message:
@@ -259,7 +253,7 @@ export const markAnswerHelpful = async (req, res) => {
     // Keep old value so we know if we just marked helpful now
     const wasMarkedBefore = answer.isMarkedHelpful;
 
-    // ✅ Toggle helpful on this answer (no unmarking of others)
+    // Toggle helpful on this answer (no unmarking of others)
     answer.isMarkedHelpful = !answer.isMarkedHelpful;
     await answer.save();
 
@@ -277,7 +271,7 @@ export const markAnswerHelpful = async (req, res) => {
       "name role"
     );
 
-    // 🔔 Notification: answer author gets alert when their answer is marked helpful
+    // Notification: answer author gets alert when their answer is marked helpful
     try {
       // We only notify when changing from "not helpful" -> "helpful"
       if (!wasMarkedBefore && answer.isMarkedHelpful) {
