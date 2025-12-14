@@ -3,6 +3,12 @@ import Course from "../models/Course.js";
 import LearningActivity from "../models/LearningActivity.js";
 import Certificate from "../models/Certificate.js";
 
+/**
+ * Helper: calculates learning stats for a student.
+ * Can be reused by:
+ *  - /api/stats/my  (JSON API)
+ *  - /api/reports/progress  (PDF export later)
+ */
 export const calculateLearningStats = async (studentId) => {
   // All courses where the student is enrolled
   const courses = await Course.find({

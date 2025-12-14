@@ -21,7 +21,7 @@ export const createQuestion = async (req, res) => {
         .json({ message: "Title and content are required" });
     }
 
-    // 1) Find the course and check enrollment
+    // Find the course and check enrollment
     const course = await Course.findById(courseId).populate(
       "enrolledStudents",
       "_id"
@@ -43,7 +43,7 @@ export const createQuestion = async (req, res) => {
       });
     }
 
-    // 2) Create the question
+    //  Create the question
     const question = await Question.create({
       course: courseId,
       user: studentId,
@@ -53,9 +53,10 @@ export const createQuestion = async (req, res) => {
 
     const populatedQuestion = await question.populate("user", "name role");
 
-    // 3)  Notification: instructor gets alert when a student asks a question
+    //   Notification: instructor gets alert when a student asks a question
     try {
-      const instructorUserId = course.instructor?._id || course.instructor;
+      const instructorUserId =
+        course.instructor?._id || course.instructor;
       const courseTitle = course.title || "your course";
       const questionTitle = question.title || "a question";
       const studentName = req.user?.name || "A student";
@@ -91,7 +92,7 @@ export const getCourseQuestions = async (req, res) => {
 
     const questions = await Question.find({ course: courseId })
       .populate("user", "name role")
-      .sort({ isResolved: 1, createdAt: -1 });
+      .sort({isResolved: 1, createdAt: -1 });
 
     res.json(questions);
   } catch (error) {
@@ -100,7 +101,7 @@ export const getCourseQuestions = async (req, res) => {
   }
 };
 
-// -------------------- ANSWERS (REPLIES) -------------------- //
+// -------------------- ANSWERS -------------------- //
 
 // Create a reply (answer) to a question
 export const createAnswer = async (req, res) => {
@@ -109,7 +110,9 @@ export const createAnswer = async (req, res) => {
     const { content } = req.body;
 
     if (!content || content.trim() === "") {
-      return res.status(400).json({ message: "Answer content is required" });
+      return res
+        .status(400)
+        .json({ message: "Answer content is required" });
     }
 
     const question = await Question.findById(questionId);
@@ -125,7 +128,7 @@ export const createAnswer = async (req, res) => {
 
     const populatedAnswer = await answer.populate("user", "name role");
 
-    // 🔔 Notification: question owner gets alert when their question is replied
+    //  Notification: question owner gets alert when their question is replied
     try {
       // Don't notify if the same person answers their own question
       if (question.user.toString() !== req.user._id.toString()) {
@@ -133,7 +136,8 @@ export const createAnswer = async (req, res) => {
 
         const questionTitle = question.title || "your question";
         const courseTitle = course ? course.title : "this course";
-        const authorName = populatedAnswer?.user?.name || "Someone";
+        const authorName =
+          populatedAnswer?.user?.name || "Someone";
 
         await Notification.create({
           user: question.user, // student who asked
@@ -151,10 +155,10 @@ export const createAnswer = async (req, res) => {
         "Error creating notification for question reply:",
         notifyErr
       );
-      // Don't break the main request if notification fails
     }
 
     res.status(201).json(populatedAnswer);
+
   } catch (error) {
     console.error("Error creating answer:", error);
     res.status(500).json({ message: error.message });
@@ -179,9 +183,7 @@ export const getQuestionAnswers = async (req, res) => {
 
 // -------------------- UPVOTE & MARK HELPFUL -------------------- //
 
-// Upvote an answer (any logged-in user)
-// Upvote / un-upvote an answer (toggle, one user = one vote)
-// Upvote / un-upvote an answer (toggle, one user = one vote)
+
 export const upvoteAnswer = async (req, res) => {
   try {
     const { answerId } = req.params;
@@ -198,16 +200,18 @@ export const upvoteAnswer = async (req, res) => {
     }
 
     // Check if this user already upvoted
-    const index = answer.upvotedBy.findIndex((u) => u.toString() === userId);
+    const index = answer.upvotedBy.findIndex(
+      (u) => u.toString() === userId
+    );
 
     let hasUpvoted;
 
     if (index === -1) {
-      // ✅ First time click → add vote
+      // First time click → add vote
       answer.upvotedBy.push(req.user._id);
       hasUpvoted = true;
     } else {
-      // ✅ Second click → remove vote
+      //Second click → remove vote
       answer.upvotedBy.splice(index, 1);
       hasUpvoted = false;
     }
@@ -230,10 +234,8 @@ export const upvoteAnswer = async (req, res) => {
   }
 };
 
-/// Mark / unmark an answer as helpful
-// Rules:
-// - ONLY the student who posted the question can do this
-// - Multiple answers can be helpful for the same question
+/// Mark /unmark an answer as helpful
+
 export const markAnswerHelpful = async (req, res) => {
   try {
     const { answerId } = req.params;
@@ -248,7 +250,7 @@ export const markAnswerHelpful = async (req, res) => {
       return res.status(404).json({ message: "Parent question not found" });
     }
 
-    // ✅ Only the question author can mark helpful
+    // Only the question author can mark helpful
     if (question.user.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         message:
@@ -259,7 +261,7 @@ export const markAnswerHelpful = async (req, res) => {
     // Keep old value so we know if we just marked helpful now
     const wasMarkedBefore = answer.isMarkedHelpful;
 
-    // ✅ Toggle helpful on this answer (no unmarking of others)
+    // Toggle helpful on this answer (no unmarking of others)
     answer.isMarkedHelpful = !answer.isMarkedHelpful;
     await answer.save();
 
@@ -277,13 +279,15 @@ export const markAnswerHelpful = async (req, res) => {
       "name role"
     );
 
-    // 🔔 Notification: answer author gets alert when their answer is marked helpful
+    //  Notification: answer author gets alert when their answer is marked helpful
     try {
       // We only notify when changing from "not helpful" -> "helpful"
       if (!wasMarkedBefore && answer.isMarkedHelpful) {
-        // Don't notify if they marked their own answer as helpful (just in case)
+        
         if (answer.user.toString() !== req.user._id.toString()) {
-          const course = await Course.findById(question.course).select("title");
+          const course = await Course.findById(question.course).select(
+            "title"
+          );
 
           const questionTitle = question.title || "this question";
           const courseTitle = course ? course.title : "this course";
@@ -335,7 +339,8 @@ export const deleteQuestion = async (req, res) => {
     }
 
     const isOwner = question.user.toString() === userId.toString();
-    const isInstructor = course.instructor.toString() === userId.toString();
+    const isInstructor =
+      course.instructor.toString() === userId.toString();
 
     // author, course instructor, or admin
     if (!isOwner && !isInstructor && req.user.role !== "admin") {
@@ -378,7 +383,8 @@ export const deleteAnswer = async (req, res) => {
     }
 
     const isOwner = answer.user.toString() === userId.toString();
-    const isInstructor = course.instructor.toString() === userId.toString();
+    const isInstructor =
+      course.instructor.toString() === userId.toString();
 
     // author, course instructor, or admin
     if (!isOwner && !isInstructor && req.user.role !== "admin") {

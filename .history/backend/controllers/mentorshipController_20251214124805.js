@@ -29,6 +29,7 @@ const combineDateAndTimeToDate = (dateStr, timeStr) => {
 const isValidYyyyMmDd = (dateStr) =>
   typeof dateStr === "string" && /^\d{4}-\d{2}-\d{2}$/.test(dateStr);
 
+
 const addSlotsFromInterval = (
   intervalStartMinutes,
   intervalEndMinutes,
@@ -40,14 +41,11 @@ const addSlotsFromInterval = (
   const MIN_DURATION = 15; // minutes
   const MAX_DURATION = 30; // minutes
 
-  for (
-    let t = intervalStartMinutes;
-    t + MIN_DURATION <= intervalEndMinutes;
-    t += 5
-  ) {
+  for (let t = intervalStartMinutes; t + MIN_DURATION <= intervalEndMinutes; t += 5) {
     const maxDurPossible = intervalEndMinutes - t;
     let maxDuration = Math.min(MAX_DURATION, maxDurPossible);
 
+    
     maxDuration = Math.floor(maxDuration / 5) * 5;
 
     if (maxDuration < MIN_DURATION) continue;
@@ -84,9 +82,7 @@ export const getMyAvailability = async (req, res) => {
       filter.date = { $lte: to };
     }
 
-    const availability = await InstructorAvailability.find(filter).sort({
-      date: 1,
-    });
+    const availability = await InstructorAvailability.find(filter).sort({ date: 1 });
 
     res.json(availability);
   } catch (error) {
@@ -94,6 +90,7 @@ export const getMyAvailability = async (req, res) => {
     res.status(500).json({ message: "Server error fetching availability" });
   }
 };
+
 
 export const upsertAvailabilityForDate = async (req, res) => {
   try {
@@ -215,6 +212,7 @@ export const upsertAvailabilityForDate = async (req, res) => {
       }
     }
 
+
     if (!isBlocked) {
       try {
         const now = new Date();
@@ -238,7 +236,8 @@ export const upsertAvailabilityForDate = async (req, res) => {
         for (const s of sessions) {
           const startMinutes =
             s.startTime.getHours() * 60 + s.startTime.getMinutes();
-          const endMinutes = s.endTime.getHours() * 60 + s.endTime.getMinutes();
+          const endMinutes =
+            s.endTime.getHours() * 60 + s.endTime.getMinutes();
 
           // Is there ANY new range that fully contains this session?
           const fitsAnyRange = rangesMinutes.some(
@@ -283,7 +282,9 @@ export const upsertAvailabilityForDate = async (req, res) => {
         );
         // Don't fail the main request if this part breaks
       }
-    }
+    }    
+
+
 
     res.json(updated);
   } catch (error) {
@@ -291,6 +292,115 @@ export const upsertAvailabilityForDate = async (req, res) => {
     res.status(500).json({ message: "Server error updating availability" });
   }
 };
+
+
+
+/**
+ * DELETE /api/mentorship/availability/:id
+ * Delete a specific availability document for the instructor.
+ */
+// export const deleteAvailabilityDay = async (req, res) => {
+//   try {
+//     const instructorId = req.user._id || req.user.id;
+//     const { id } = req.params;
+
+//     const deleted = await InstructorAvailability.findOneAndDelete({
+//       _id: id,
+//       instructor: instructorId,
+//     });
+
+//     if (!deleted) {
+//       return res.status(404).json({ message: "Availability not found" });
+//     }
+
+//     const date = deleted.date;
+
+//     if (date) {
+//       const now = new Date();
+//       const dayEnd = new Date(`${date}T23:59:59.999`);
+
+//       // All *booked* sessions for that date
+//       const [sessions, coursesTaught] = await Promise.all([
+//         MentorshipSession.find({
+//           instructor: instructorId,
+//           startTime: { $gte: now, $lte: dayEnd },
+//           status: "booked",
+//         }).populate("student course", "name title"),
+//         Course.find({ instructor: instructorId }).select(
+//           "title enrolledStudents"
+//         ),
+//       ]);
+
+//       // Cancel them
+//       if (sessions.length > 0) {
+//         await MentorshipSession.updateMany(
+//           {
+//             instructor: instructorId,
+//             startTime: { $gte: now, $lte: dayEnd },
+//             status: "booked",
+//           },
+//           { $set: { status: "cancelledByInstructor" } }
+//         );
+//       }
+
+//       // All students enrolled in any of this instructor's courses
+//       const allStudentIdsSet = new Set();
+//       coursesTaught.forEach((course) => {
+//         (course.enrolledStudents || []).forEach((sid) =>
+//           allStudentIdsSet.add(String(sid))
+//         );
+//       });
+
+//       const studentsWithSessionSet = new Set(
+//         sessions.map((s) =>
+//           s.student?._id ? s.student._id.toString() : s.student.toString()
+//         )
+//       );
+
+//       const allStudentIds = [...allStudentIdsSet];
+
+//       const instructorName = req.user?.name || "Your instructor";
+//       const formattedDate = date;
+
+//       const notifications = allStudentIds.map((studentId) => {
+//         const hadSession = studentsWithSessionSet.has(studentId);
+//         const extra = hadSession
+//           ? " Any consultation you booked on this day has been cancelled."
+//           : "";
+//         return {
+//           user: studentId,
+//           type: "consultation_blocked",
+//           title: "Consultations unavailable",
+//           message: `${instructorName} is not available for consultations on ${formattedDate}.${extra}`,
+//           link: "/student/consultations",
+//         };
+//       });
+
+//       if (notifications.length > 0) {
+//         try {
+//           await Notification.insertMany(notifications);
+//         } catch (notifyErr) {
+//           console.error(
+//             "Error creating notifications for deleted consultation day:",
+//             notifyErr
+//           );
+//         }
+//       }
+//     }
+
+//     res.json({
+//       message:
+//         "Availability deleted and upcoming sessions for this day were cancelled",
+//     });
+//   } catch (error) {
+//     console.error("Error in deleteAvailabilityDay:", error);
+//     res.status(500).json({ message: "Server error deleting availability" });
+//   }
+// };
+
+
+/* ---------- Student: view free slots & book ---------- */
+
 
 export const getAvailableSlotsForCourse = async (req, res) => {
   try {
@@ -364,10 +474,12 @@ export const getAvailableSlotsForCourse = async (req, res) => {
     });
 
     const bookedIntervals = bookedSessions.map((s) => {
-      const start = s.startTime.getHours() * 60 + s.startTime.getMinutes();
+      const start =
+        s.startTime.getHours() * 60 + s.startTime.getMinutes();
       const end = s.endTime.getHours() * 60 + s.endTime.getMinutes();
       return [start, end];
     });
+    
 
     const now = new Date();
     const slots = [];
@@ -379,7 +491,9 @@ export const getAvailableSlotsForCourse = async (req, res) => {
 
       // All booked intervals that overlap this availability range
       const overlapping = bookedIntervals
-        .filter(([bStart, bEnd]) => bEnd > rangeStart && bStart < rangeEnd)
+        .filter(
+          ([bStart, bEnd]) => bEnd > rangeStart && bStart < rangeEnd
+        )
         .sort((a, b) => a[0] - b[0]);
 
       let currentStart = rangeStart;
@@ -428,11 +542,11 @@ export const getAvailableSlotsForCourse = async (req, res) => {
   }
 };
 
+
 export const bookSession = async (req, res) => {
   try {
     const studentId = req.user._id || req.user.id;
-    const { courseId, date, startTime, durationMinutes, studentNote } =
-      req.body;
+    const { courseId, date, startTime, durationMinutes, studentNote } = req.body;
 
     if (!courseId || !date || !startTime || !durationMinutes) {
       return res.status(400).json({
@@ -510,8 +624,7 @@ export const bookSession = async (req, res) => {
 
     if (!fitsInRange) {
       return res.status(400).json({
-        message:
-          "Selected time does not fit within the instructor's availability",
+        message: "Selected time does not fit within the instructor's availability",
       });
     }
 
@@ -546,7 +659,8 @@ export const bookSession = async (req, res) => {
 
     // Notification: instructor gets alert when a student books a session
     try {
-      const instructorUserId = session.instructor?._id || session.instructor;
+      const instructorUserId =
+        session.instructor?._id || session.instructor;
       const studentName = session.student?.name || "A student";
       const courseTitle = session.course?.title || "a course";
       const startStr = session.startTime.toLocaleString();
@@ -575,6 +689,7 @@ export const bookSession = async (req, res) => {
 
 /* ---------- Instructor: view today's sessions ---------- */
 
+
 export const getTodaySessionsForInstructor = async (req, res) => {
   try {
     const instructorId = req.user._id || req.user.id;
@@ -583,12 +698,12 @@ export const getTodaySessionsForInstructor = async (req, res) => {
     const startOfDay = new Date(now);
     startOfDay.setHours(0, 0, 0, 0);
     const endOfDay = new Date(now);
-    endOfDay.setDate(endOfDay.getDate() + 4);
+    endOfDay.setDate(endOfDay.getDate() + 4); 
     endOfDay.setHours(23, 59, 59, 999);
 
     const sessions = await MentorshipSession.find({
       instructor: instructorId,
-      status: "booked", // only booked
+      status: "booked",                // only booked
       startTime: { $gte: now, $lte: endOfDay }, // only upcoming today
     })
       .populate("student", "name email")
@@ -598,11 +713,15 @@ export const getTodaySessionsForInstructor = async (req, res) => {
     res.json(sessions);
   } catch (error) {
     console.error("Error in getTodaySessionsForInstructor:", error);
-    res.status(500).json({ message: "Server error fetching today's sessions" });
+    res
+      .status(500)
+      .json({ message: "Server error fetching today's sessions" });
   }
 };
 
+
 /* ---------- Student: view & cancel their own sessions ---------- */
+
 
 export const getMySessionsForStudent = async (req, res) => {
   try {
@@ -611,18 +730,21 @@ export const getMySessionsForStudent = async (req, res) => {
 
     const sessions = await MentorshipSession.find({
       student: studentId,
-      status: "booked",
-      startTime: { $gte: now },
+      status: "booked",            // only booked
+      startTime: { $gte: now },    // only upcoming
     })
       .populate("instructor", "name email")
       .populate("course", "title")
-      .sort({ startTime: 1 });
+      .sort({ startTime: 1 });     // earliest first
+
     res.json(sessions);
   } catch (error) {
     console.error("Error in getMySessionsForStudent:", error);
     res.status(500).json({ message: "Server error fetching sessions" });
   }
 };
+
+
 
 export const cancelSessionByStudent = async (req, res) => {
   try {
