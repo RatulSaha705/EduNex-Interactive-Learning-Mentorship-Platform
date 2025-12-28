@@ -4,6 +4,11 @@ This repository is a **fork** of the original *EduNex – Interactive Learning M
 I contributed to this project as part of a group collaboration.  
 This fork is maintained to document my contributions and for further development and reference.
 
+## Project Documentation
+This repository includes comprehensive project documentation for reference.  
+A detailed PDF file is provided that describes the complete feature set, system functionality, and module-level details.  
+Additionally, a PNG image containing the class diagram is included to illustrate the system architecture and class relationships.
+
 ## My Contributions
 I worked on the **Mentorship & Discussion module**, which focuses on communication and academic guidance within the platform.  
 Implemented features include:
